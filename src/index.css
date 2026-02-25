@@ -1,0 +1,70 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+@import 'tailwindcss';
+
+
+
+@layer base {
+  html {
+    font-family: 'Poppins', sans-serif;
+    scroll-behavior: smooth;
+    /* Reduce base font-size to make the UI more compact (approx. 67% of 16px) */
+    font-size: 10.75px;
+  }
+
+  body {
+    background-color: #F8F9FB;
+  }
+}
+
+@layer components {
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .stats-card-button {
+    @apply relative overflow-hidden transition-all duration-300 cursor-pointer;
+  }
+
+  .stats-card-button.active {
+    @apply ring-4 ring-offset-2 ring-offset-white;
+  }
+
+  .stats-card-button:active {
+    @apply scale-95;
+  }
+
+  .chart-container {
+    @apply transition-all duration-300;
+  }
+
+  .chart-container.hidden {
+    @apply opacity-0 scale-95 pointer-events-none;
+  }
+
+  .tap-highlight {
+    @apply transition-all duration-150;
+  }
+
+  .tap-highlight:active {
+    @apply opacity-75 scale-95;
+  }
+}
+
+@layer utilities {
+  .touch-feedback {
+    @apply cursor-pointer transition-opacity duration-150;
+  }
+
+  .touch-feedback:active {
+    @apply opacity-75;
+  }
+}
+
+input:focus {
+  outline: none !important;
+}
