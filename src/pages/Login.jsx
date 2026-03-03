@@ -1,109 +1,90 @@
-import { useState } from "react";
-import { man,cevitalLogo } from "./Managment";
-import LoginLogo from "../components/login-logo";
-import { useNavigate } from "react-router-dom";
-import { origins } from "./Managment";
+// src/pages/Login.jsx
+// Same UI as before — wired to the real backend via AuthContext.
+
+import { useState } from 'react';
+import { man, cevitalLogo } from './Managment';
+import LoginLogo from '../components/login-logo';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+
 export default function LoginPage() {
-    const navigate = useNavigate();
-  const [focus, setFocus] = useState(null);
-  const [userData, setUserData] = useState({
-    username: "",
-    password: "",
-  });
+  const navigate = useNavigate();
+  const { login, error: authError } = useAuth();
+
+  const [focus, setFocus]       = useState(null);
+  const [userData, setUserData] = useState({ username: '', password: '' });
+  const [submitting, setSubmitting] = useState(false);
+  const [localError, setLocalError] = useState('');
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setUserData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setLocalError('');
+    setUserData((prev) => ({ ...prev, [name]: value }));
   };
+
+  const handleLogin = async () => {
+    if (!userData.username.trim() || !userData.password.trim()) {
+      setLocalError('Veuillez remplir tous les champs.');
+      return;
+    }
+    setSubmitting(true);
+    const success = await login(userData.username, userData.password);
+    setSubmitting(false);
+    if (success) navigate('/mainlayout');
+  };
+
+  const handleKeyDown = (e) => { if (e.key === 'Enter') handleLogin(); };
+  const displayError = localError || authError;
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-6">
-      <div className="w-full max-w-6xl h-[500px] bg-[#1e2a55]  rounded-3xl shadow-2xl flex overflow-hidden">
-
-        {/* LEFT SIDE */}
+      <div className="w-full max-w-6xl h-[500px] bg-[#1e2a55] rounded-3xl shadow-2xl flex overflow-hidden">
         <div className="hidden md:flex w-1/2 items-center justify-center relative bg-white">
-        <div className="absolute top-6 left-6 w-40">      
-              <img src={cevitalLogo} alt="Cevital Logo" className="w-40 object-contain" />
-         </div>
-          <img src={man} alt="Man illustration" className="w-[300] object-contain" />
-         
+          <div className="absolute top-6 left-6 w-40">
+            <img src={cevitalLogo} alt="Cevital Logo" className="w-40 object-contain" />
+          </div>
+          <img src={man} alt="Man illustration" className="w-[300px] object-contain" />
         </div>
 
-
         <div className="w-full md:w-1/2 flex flex-col justify-center px-10 text-white relative">
-<div className="absolute top-6 left-6 w-40"> 
-                <LoginLogo />
-</div>
+          <div className="absolute top-6 left-6 w-40"><LoginLogo /></div>
 
           <h1 className="text-3xl font-semibold mb-8">Login</h1>
 
-          {/* Username */}
+          {displayError && (
+            <div className="mb-4 px-4 py-2 rounded-xl bg-red-500/20 border border-red-400 text-red-300 text-sm">
+              {displayError}
+            </div>
+          )}
+
           <div className="mb-4">
             <label className="text-sm text-gray-300">Username</label>
-            <input
-              type="text"
-              placeholder="Enter your username"
-              onFocus={() => setFocus("username")}
-              onBlur={() => setFocus(null)}
-              className={`w-full mt-2 px-4 py-3 rounded-xl bg-[#0f1833] outline-none transition-all
-                ${
-                  focus === "username"
-                    ? "ring-2 ring-blue-400"
-                    : "border border-transparent"
-                }
-              `}
-              value={userData.username}
-              onChange={handleInputChange}
-              name="username"
-            />
+            <input type="text" name="username" placeholder="Enter your username"
+              onFocus={() => setFocus('username')} onBlur={() => setFocus(null)} onKeyDown={handleKeyDown}
+              className={`w-full mt-2 px-4 py-3 rounded-xl bg-[#0f1833] outline-none transition-all ${focus === 'username' ? 'ring-2 ring-blue-400' : 'border border-transparent'}`}
+              value={userData.username} onChange={handleInputChange} />
           </div>
 
-          {/* Password */}
           <div className="mb-2">
             <label className="text-sm text-gray-300">Password</label>
-            <input
-              type="password"
-              placeholder="Enter your password"
-              onFocus={() => setFocus("password")}
-              onBlur={() => setFocus(null)}
-              className={`w-full mt-2 px-4 py-3 rounded-xl bg-[#0f1833] outline-none transition-all
-                ${
-                  focus === "password"
-                    ? "ring-2 ring-blue-400"
-                    : "border border-transparent"
-                }
-              `}
-              value={userData.password}
-              onChange={handleInputChange}
-              name="password"
-            />
+            <input type="password" name="password" placeholder="Enter your password"
+              onFocus={() => setFocus('password')} onBlur={() => setFocus(null)} onKeyDown={handleKeyDown}
+              className={`w-full mt-2 px-4 py-3 rounded-xl bg-[#0f1833] outline-none transition-all ${focus === 'password' ? 'ring-2 ring-blue-400' : 'border border-transparent'}`}
+              value={userData.password} onChange={handleInputChange} />
           </div>
 
           <div className="text-right mb-6">
-            <a href="#" className="text-sm text-blue-400 hover:underline">
-              Forgot Password?
-            </a>
+            <a href="#" className="text-sm text-blue-400 hover:underline">Forgot Password?</a>
           </div>
 
-          
-          <button className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-400 hover:opacity-90 transition-all shadow-lg"
-          onClick={() =>{
-            navigate("/mainlayout");
-          }}
-          >
-            Login
+          <button onClick={handleLogin} disabled={submitting}
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-400 hover:opacity-90 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+            {submitting ? (
+              <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Connexion...</>
+            ) : 'Login'}
           </button>
 
-          
-        
-
-          {/* Footer */}
-          <p className="text-xs text-gray-500 mt-10 text-center">
-            Terms and Services
-          </p>
+          <p className="text-xs text-gray-500 mt-10 text-center">Terms and Services</p>
         </div>
       </div>
     </div>
