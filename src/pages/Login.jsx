@@ -2,7 +2,7 @@ import { useState } from "react";
 import { man,cevitalLogo } from "./Managment";
 import LoginLogo from "../components/login-logo";
 import { useNavigate } from "react-router-dom";
-
+import { origins } from "./Managment";
 export default function LoginPage() {
     const navigate = useNavigate();
   const [focus, setFocus] = useState(null);

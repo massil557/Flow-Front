@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { cevitalLogo} from "../pages/Managment";
 import Logo from "../components/logo";
 
+const user= 'automatician';
+
 const SidebarItem = ({ to='/', label, active }) => (
   <Link
     to={to}
@@ -64,10 +66,15 @@ export default function MainLayout() {
       <aside className="hidden lg:flex w-40 bg-[#17203f] border-r border-slate-100 flex-col items-start  py-10 sticky lg:fixed lg:left-0 lg:top-0 h-screen z-20">
          <Logo/>
         <nav className="flex flex-col gap-3 w-full mt-6">
-          <SidebarItem label="Dashboard" to="/mainlayout" active={location.pathname === "/mainlayout"} />
-          <SidebarItem label="Analytics" to="/mainlayout/analytics" active={location.pathname === "/mainlayout/analytics"} />
-          <SidebarItem label="Alerts" to="/mainlayout/alerts" active={location.pathname === "/mainlayout/alerts"} />
-          <SidebarItem label="Plant Map" to="/mainlayout/plantmap" active={location.pathname === "/mainlayout/plantmap"} />
+
+{user === 'automatician' && (
+  <>
+  <SidebarItem label="Dashboard" to="/mainlayout" active={location.pathname === "/mainlayout"} />
+  <SidebarItem label="Analytics" to="/mainlayout/analytics" active={location.pathname === "/mainlayout/analytics"} />
+  <SidebarItem label="Alerts" to="/mainlayout/alerts" active={location.pathname === "/mainlayout/alerts"} />
+  <SidebarItem label="Plant Map" to="/mainlayout/plantmap" active={location.pathname === "/mainlayout/plantmap"} /></>
+)}
+          
         </nav>
         <div className="mt-auto w-full pb-6">
           <SidebarItem label="Logout" to="/"/>
