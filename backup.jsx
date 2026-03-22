@@ -23,16 +23,20 @@ const QUICK_OPTIONS = [
   { label: '2h',     value: 2    },
 ];
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function toLocalInputValue(date) {
   const pad = n => String(n).padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
-function nowLocal()       { return toLocalInputValue(new Date()); }
-function hoursAgoLocal(h) { return toLocalInputValue(new Date(Date.now() - h * 3600000)); }
+function nowLocal()        { return toLocalInputValue(new Date()); }
+function hoursAgoLocal(h)  { return toLocalInputValue(new Date(Date.now() - h * 3600000)); }
 
+// Convert local datetime-local string to ISO but keep local time offset (+01:00)
 function toLocalISO(localStr) {
-  const d      = new Date(localStr);
-  const offset = -d.getTimezoneOffset();
+  // localStr is like "2026-03-04T22:00"
+  // We want "2026-03-04T22:00:00+01:00" so the backend matches DB timezone
+  const d = new Date(localStr);
+  const offset = -d.getTimezoneOffset(); // minutes
   const sign   = offset >= 0 ? '+' : '-';
   const hh     = String(Math.floor(Math.abs(offset) / 60)).padStart(2, '0');
   const mm     = String(Math.abs(offset) % 60).padStart(2, '0');
@@ -59,12 +63,6 @@ const CategoryButton = ({ category, isActive, onSelect }) => {
 // ── Sensor card ───────────────────────────────────────────────────────────────
 const SensorCard = ({ sensorKey, sensorData, categoryColor, categoryUnit, critValue }) => {
   const [loadingReport, setLoadingReport] = useState(false);
-  const [sendingEmail,  setSendingEmail]  = useState(false);
-  const [emailModal,    setEmailModal]    = useState(false);
-  const [emailTo,       setEmailTo]       = useState('');
-  const [lastBlob,      setLastBlob]      = useState(null);
-  const [lastChartImg,  setLastChartImg]  = useState(null);
-
   if (!sensorData || sensorData.length === 0) return null;
 
   const latestValue = sensorData[sensorData.length - 1]?.v?.toFixed(1) || '0';
@@ -73,42 +71,26 @@ const SensorCard = ({ sensorKey, sensorData, categoryColor, categoryUnit, critVa
     y: typeof p.v === 'number' ? p.v : parseFloat(p.v),
   }));
 
-  const generatePdf = async () => {
-    const payload = {
-      sensor_name: sensorKey,
-      threshold:   critValue,
-      data: chartData.map(d => ({ x: d.x.toISOString(), y: d.y })),
-    };
-    const resp = await fetch(`${origins}/generate-report`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(payload),
-    });
-    if (!resp.ok) throw new Error('Erreur serveur');
-    return await resp.blob();
-  };
-
   const handleGenerateReport = async () => {
     setLoadingReport(true);
     try {
-      const blob = await generatePdf();
-      setLastBlob(blob);
-
-      // Download PDF
-      const url = window.URL.createObjectURL(blob);
-      const a   = document.createElement('a');
-      a.href    = url;
+      const payload = {
+        sensor_name: sensorKey,
+        threshold:   critValue,
+        data: chartData.map(d => ({ x: d.x.toISOString(), y: d.y })),
+      };
+      const resp = await fetch(`${origins}/generate-report`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload),
+      });
+      if (!resp.ok) throw new Error('Erreur serveur');
+      const blob = await resp.blob();
+      const url  = window.URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
       a.download = `Rapport_IA_${sensorKey}.pdf`;
       a.click();
-
-      // Capture chart canvas as PNG
-      const container = document.getElementById(`chart-${sensorKey}`);
-      const canvas    = container ? container.querySelector('canvas') : null;
-      if (canvas) {
-        setLastChartImg(canvas.toDataURL('image/png').split(',')[1]);
-      }
-
-      setEmailModal(true);
     } catch (e) {
       console.error(e);
       alert("Échec de la génération du rapport.");
@@ -117,41 +99,9 @@ const SensorCard = ({ sensorKey, sensorData, categoryColor, categoryUnit, critVa
     }
   };
 
-  const handleSendEmail = () => {
-    if (!emailTo.trim() || !lastBlob) return;
-    setSendingEmail(true);
-    const reader = new FileReader();
-    reader.readAsDataURL(lastBlob);
-    reader.onloadend = async () => {
-      try {
-        const base64 = reader.result.split(',')[1];
-        const resp = await fetch(`${origins}/send-report-email`, {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            to_email:     emailTo,
-            sensor_name:  sensorKey,
-            pdf_base64:   base64,
-            chart_base64: lastChartImg || null,
-          }),
-        });
-        if (!resp.ok) throw new Error('Erreur envoi email');
-        setEmailModal(false);
-        setEmailTo('');
-        alert(`Rapport envoyé à ${emailTo}`);
-      } catch (e) {
-        console.error(e);
-        alert("Échec de l'envoi email.");
-      } finally {
-        setSendingEmail(false);
-      }
-    };
-  };
-
   return (
     <div className="bg-white rounded-[2.5rem] p-6 shadow-md border border-slate-50 relative overflow-hidden mb-6">
       <style>{scrollStyles}</style>
-
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-slate-50 rounded-2xl">
@@ -167,80 +117,14 @@ const SensorCard = ({ sensorKey, sensorData, categoryColor, categoryUnit, critVa
           disabled={loadingReport}
           className="px-6 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-blue-600 disabled:bg-slate-300 transition-all flex items-center gap-2"
         >
-          {loadingReport ? (
-            <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" /> Analyzing...</>
-          ) : 'AI Report'}
+          {loadingReport ? 'Analyzing...' : 'AI Report'}
         </button>
       </div>
-
-      <div id={`chart-${sensorKey}`} className="w-full chart-scroll overflow-x-auto overflow-y-hidden rounded-3xl border border-slate-100 bg-slate-50/30" style={{ height: '350px' }}>
+      <div className="w-full chart-scroll overflow-x-auto overflow-y-hidden rounded-3xl border border-slate-100 bg-slate-50/30" style={{ height: '350px' }}>
         <div style={{ width: `${Math.max(sensorData.length * 10, 800)}px`, height: '100%' }}>
           <IndustrialChart data={chartData} color={categoryColor} unit={categoryUnit} critValue={critValue} />
         </div>
       </div>
-
-      {/* Email modal */}
-      {emailModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8 relative">
-            <button
-              onClick={() => { setEmailModal(false); setEmailTo(''); }}
-              className="absolute top-5 right-5 text-slate-400 hover:text-slate-600 text-lg font-bold"
-            >✕</button>
-
-            <div className="flex items-center gap-3 mb-5">
-              <div className="p-3 bg-blue-50 rounded-2xl text-2xl"></div>
-              <div>
-                <h2 className="text-lg font-black text-slate-800">Envoyer le rapport</h2>
-                <p className="text-xs text-slate-400">PDF + graphique en pièces jointes</p>
-              </div>
-            </div>
-
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              Email destinataire
-            </label>
-            <input
-              type="email"
-              value={emailTo}
-              onChange={e => setEmailTo(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSendEmail()}
-              placeholder="ex: responsable@cevital.dz"
-              className="w-full mt-1.5 mb-6 px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 outline-none focus:ring-2 focus:ring-blue-400 text-sm"
-            />
-
-            {/* Attachment preview */}
-            <div className="flex gap-2 mb-6">
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 border border-red-100 rounded-xl text-xs font-bold text-red-500">
-                Rapport_IA_{sensorKey}.pdf
-              </div>
-              {lastChartImg && (
-                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-xl text-xs font-bold text-blue-500">
-                  🖼 Graphique_{sensorKey}.png
-                </div>
-              )}
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => { setEmailModal(false); setEmailTo(''); }}
-                className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-all"
-              >
-                Ignorer
-              </button>
-              <button
-                onClick={handleSendEmail}
-                disabled={sendingEmail || !emailTo.trim()}
-                className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
-              >
-                {sendingEmail
-                  ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  : 'Envoyer'
-                }
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
@@ -249,6 +133,7 @@ const SensorCard = ({ sensorKey, sensorData, categoryColor, categoryUnit, critVa
 function TimeRangePicker({ mode, setMode, quickHours, setQuickHours, customStart, setCustomStart, customEnd, setCustomEnd, onApply, error }) {
   return (
     <div className="flex flex-wrap items-center gap-3">
+      {/* Quick presets */}
       <div className="flex items-center bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200">
         {QUICK_OPTIONS.map(opt => (
           <button
@@ -265,6 +150,7 @@ function TimeRangePicker({ mode, setMode, quickHours, setQuickHours, customStart
         ))}
       </div>
 
+      {/* Custom range toggle */}
       <button
         onClick={() => setMode(mode === 'custom' ? 'quick' : 'custom')}
         className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl border-2 font-bold text-sm transition-all ${
@@ -277,6 +163,7 @@ function TimeRangePicker({ mode, setMode, quickHours, setQuickHours, customStart
         Custom Range
       </button>
 
+      {/* Custom date inputs */}
       {mode === 'custom' && (
         <div className="flex flex-wrap items-center gap-2 bg-white border-2 border-blue-100 rounded-2xl px-4 py-2 shadow-sm">
           <div className="flex flex-col">
@@ -289,7 +176,9 @@ function TimeRangePicker({ mode, setMode, quickHours, setQuickHours, customStart
               className="text-sm font-medium text-slate-700 outline-none bg-transparent cursor-pointer"
             />
           </div>
+
           <ArrowRight size={16} className="text-slate-300 mt-3" />
+
           <div className="flex flex-col">
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">To</label>
             <input
@@ -301,6 +190,7 @@ function TimeRangePicker({ mode, setMode, quickHours, setQuickHours, customStart
               className="text-sm font-medium text-slate-700 outline-none bg-transparent cursor-pointer"
             />
           </div>
+
           <button
             onClick={onApply}
             disabled={!!error}
@@ -308,6 +198,7 @@ function TimeRangePicker({ mode, setMode, quickHours, setQuickHours, customStart
           >
             Apply
           </button>
+
           {error && <p className="w-full text-xs text-red-500 font-medium mt-1">{error}</p>}
         </div>
       )}
@@ -330,6 +221,7 @@ export default function Dashboard() {
   const [appliedRange, setAppliedRange] = useState(null);
   const [rangeError,   setRangeError]   = useState('');
 
+  // Validate custom range
   useEffect(() => {
     if (mode !== 'custom') { setRangeError(''); return; }
     if (!customStart || !customEnd) { setRangeError('Please select both dates.'); return; }
@@ -342,6 +234,7 @@ export default function Dashboard() {
 
   const handleApplyCustom = () => {
     if (rangeError || !customStart || !customEnd) return;
+    // Send timezone-aware ISO strings so backend matches +01 stored timestamps
     setAppliedRange({
       start: toLocalISO(customStart),
       end:   toLocalISO(customEnd),
@@ -352,6 +245,7 @@ export default function Dashboard() {
     if (mode === 'quick') setAppliedRange(null);
   }, [mode]);
 
+  // Load metadata
   useEffect(() => {
     const loadMeta = async () => {
       try {
@@ -366,6 +260,7 @@ export default function Dashboard() {
     loadMeta();
   }, []);
 
+  // Load history
   useEffect(() => {
     const loadHistory = async () => {
       const activeCategoryObj = CATEGORIES.find(c => c.id === activeCategory);

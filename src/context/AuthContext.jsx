@@ -32,24 +32,24 @@ export function AuthProvider({ children }) {
       setLoading(false);
     }
     rehydrate();
-  }, []); // runs once on mount only
+  }, [token]); // runs once on mount only
 
   // ── login ─────────────────────────────────────────────────────────────────
   const login = useCallback(async (username, password) => {
-    setError(null);
-    try {
-      const { access_token } = await loginRequest(username, password);
-      localStorage.setItem('flow_token', access_token);
-      setToken(access_token);
+  setError(null);
+  setLoading(true); // ← bloque ProtectedRoute pendant le login
 
-      const me = await getMeRequest(access_token);
-      setUser(me);
-      return true;
-    } catch (err) {
-      setError(err.message || 'Erreur de connexion');
-      return false;
-    }
-  }, []);
+  try {
+    const { access_token } = await loginRequest(username, password);
+    localStorage.setItem('flow_token', access_token);
+    setToken(access_token); // ← déclenche useEffect[token] → rehydrate() → setUser()
+    return true;
+  } catch (err) {
+    setError(err.message || 'Erreur de connexion');
+    setLoading(false); // ← seulement en cas d'erreur, sinon useEffect gère
+    return false;
+  }
+}, []);
 
   // ── logout ────────────────────────────────────────────────────────────────
   const logout = useCallback(() => {
