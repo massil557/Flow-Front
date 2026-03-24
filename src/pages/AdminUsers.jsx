@@ -1,11 +1,9 @@
 // src/pages/AdminUsers.jsx
-// Only accessible by role === "admin"
-// Features: list users, create user (sends email), edit user, delete user
-
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { origins } from './Managment';
 import { useAuth } from '../context/AuthContext';
+import Button from '../components/Button';
 import { UserPlus, Pencil, Trash2, X, Check, Mail, ShieldCheck, User } from 'lucide-react';
 
 const ROLES = ['admin', 'automatician', 'viewer'];
@@ -16,7 +14,6 @@ const ROLE_BADGE = {
   viewer:       'bg-slate-100 text-slate-600 border-slate-200',
 };
 
-// ── Axios instance with JWT header ───────────────────────────────────────────
 function useApi() {
   const { token } = useAuth();
   return axios.create({
@@ -25,7 +22,7 @@ function useApi() {
   });
 }
 
-// ── Modal for create / edit ───────────────────────────────────────────────────
+// ── Modal ─────────────────────────────────────────────────────────────────────
 function UserModal({ mode, user, onClose, onSave }) {
   const [form, setForm] = useState(
     mode === 'edit'
@@ -53,63 +50,64 @@ function UserModal({ mode, user, onClose, onSave }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 relative animate-in fade-in zoom-in duration-200">
-        <button onClick={onClose} className="absolute top-5 right-5 text-slate-400 hover:text-slate-600">
-          <X size={20} />
-        </button>
-
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-3 bg-blue-50 rounded-2xl">
-            {mode === 'create' ? <UserPlus className="text-blue-600" size={22} /> : <Pencil className="text-blue-600" size={22} />}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        {/* Modal header */}
+        <div className="flex items-center justify-between px-8 py-6 border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#17203f]/10 flex items-center justify-center">
+              {mode === 'create'
+                ? <UserPlus className="text-[#17203f]" size={20} />
+                : <Pencil className="text-[#17203f]" size={20} />
+              }
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-[#17203f]">
+                {mode === 'create' ? 'Créer un utilisateur' : "Modifier l'utilisateur"}
+              </h2>
+              {mode === 'create' && (
+                <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
+                  <Mail size={11} /> Identifiants envoyés par email
+                </p>
+              )}
+            </div>
           </div>
-          <div>
-            <h2 className="text-xl font-black text-slate-800">
-              {mode === 'create' ? 'Créer un utilisateur' : 'Modifier l\'utilisateur'}
-            </h2>
-            {mode === 'create' && (
-              <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
-                <Mail size={11} /> Un mot de passe temporaire sera envoyé par email
-              </p>
-            )}
-          </div>
+          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-all">
+            <X size={18} />
+          </button>
         </div>
 
-        {error && (
-          <div className="mb-4 px-4 py-2 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm">
-            {error}
-          </div>
-        )}
+        <div className="px-8 py-6 space-y-5">
+          {error && (
+            <div className="px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm font-medium">
+              {error}
+            </div>
+          )}
 
-        <div className="space-y-4">
-          <div>
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nom d'utilisateur</label>
-            <input
-              type="text"
-              value={form.username}
-              onChange={e => setForm({ ...form, username: e.target.value })}
-              placeholder="ex: jean.dupont"
-              className="w-full mt-1.5 px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 outline-none focus:ring-2 focus:ring-blue-400 text-sm"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Email</label>
-            <input
-              type="email"
-              value={form.email}
-              onChange={e => setForm({ ...form, email: e.target.value })}
-              placeholder="ex: jean.dupont@cevital.dz"
-              className="w-full mt-1.5 px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 outline-none focus:ring-2 focus:ring-blue-400 text-sm"
-            />
-          </div>
+          {[
+            { label: "Nom d'utilisateur", key: 'username', type: 'text',  placeholder: 'jean.dupont' },
+            { label: 'Email',             key: 'email',    type: 'email', placeholder: 'jean@cevital.dz' },
+          ].map(field => (
+            <div key={field.key}>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                {field.label}
+              </label>
+              <input
+                type={field.type}
+                value={form[field.key]}
+                onChange={e => setForm({ ...form, [field.key]: e.target.value })}
+                placeholder={field.placeholder}
+                className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-slate-50 outline-none focus:border-[#17203f] text-sm font-medium transition-colors"
+              />
+            </div>
+          ))}
 
           <div>
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Rôle</label>
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Rôle</label>
             <select
               value={form.role}
               onChange={e => setForm({ ...form, role: e.target.value })}
-              className="w-full mt-1.5 px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 outline-none focus:ring-2 focus:ring-blue-400 text-sm cursor-pointer"
+              className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-slate-50 outline-none focus:border-[#17203f] text-sm font-medium cursor-pointer transition-colors"
             >
               {ROLES.map(r => (
                 <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>
@@ -118,24 +116,16 @@ function UserModal({ mode, user, onClose, onSave }) {
           </div>
         </div>
 
-        <div className="flex gap-3 mt-8">
-          <button
-            onClick={onClose}
-            className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-all"
-          >
-            Annuler
-          </button>
-          <button
+        <div className="flex gap-3 px-8 pb-8">
+          <Button variant="ghost" onClick={onClose} fullWidth>Annuler</Button>
+          <Button
             onClick={handleSubmit}
-            disabled={saving}
-            className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+            loading={saving}
+            icon={<Check size={15} />}
+            fullWidth
           >
-            {saving ? (
-              <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <><Check size={16} /> {mode === 'create' ? 'Créer & Envoyer' : 'Enregistrer'}</>
-            )}
-          </button>
+            {mode === 'create' ? 'Créer et envoyer' : 'Enregistrer'}
+          </Button>
         </div>
       </div>
     </div>
@@ -147,87 +137,81 @@ export default function AdminUsers() {
   const api = useApi();
   const { user: currentUser } = useAuth();
 
-  const [users, setUsers]       = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [modal, setModal]       = useState(null);   // null | { mode: 'create'|'edit', user? }
+  const [users,      setUsers]      = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [modal,      setModal]      = useState(null);
   const [deletingId, setDeletingId] = useState(null);
-  const [toast, setToast]       = useState('');
+  const [toast,      setToast]      = useState('');
 
-  const showToast = (msg) => {
-    setToast(msg);
-    setTimeout(() => setToast(''), 3500);
-  };
+  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 3500); };
 
-  // Load users
   const fetchUsers = async () => {
     try {
       const res = await api.get('/admin/users');
       setUsers(res.data);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
   };
 
   useEffect(() => { fetchUsers(); }, []);
 
-  // Create
   const handleCreate = async (form) => {
     await api.post('/admin/users', form);
     await fetchUsers();
-    showToast(`✅ Utilisateur "${form.username}" créé. Credentials envoyés à ${form.email}`);
+    showToast(`Utilisateur "${form.username}" créé — identifiants envoyés à ${form.email}`);
   };
 
-  // Edit
   const handleEdit = async (form) => {
     await api.patch(`/admin/users/${modal.user.id}`, form);
     await fetchUsers();
-    showToast(`✅ Utilisateur "${form.username}" mis à jour.`);
+    showToast(`Utilisateur "${form.username}" mis à jour`);
   };
 
-  // Delete
   const handleDelete = async (id, username) => {
     if (!window.confirm(`Supprimer l'utilisateur "${username}" ?`)) return;
     setDeletingId(id);
     await api.delete(`/admin/users/${id}`);
     await fetchUsers();
     setDeletingId(null);
-    showToast(`🗑️ Utilisateur "${username}" supprimé.`);
+    showToast(`Utilisateur "${username}" supprimé`);
   };
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
+
       {/* Toast */}
       {toast && (
-        <div className="fixed top-6 right-6 z-50 px-6 py-3 bg-slate-900 text-white rounded-2xl shadow-2xl text-sm font-medium animate-in slide-in-from-top-4 duration-300">
+        <div className="fixed top-6 right-6 z-50 px-6 py-3 bg-[#17203f] text-white rounded-xl shadow-2xl text-sm font-semibold max-w-sm">
           {toast}
         </div>
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 flex items-center gap-3">
-            <ShieldCheck className="text-purple-500" size={32} />
-            Gestion des Utilisateurs
+          <h1 className="text-3xl font-bold text-[#17203f] flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
+              <ShieldCheck className="text-purple-600" size={20} />
+            </div>
+            Gestion des utilisateurs
           </h1>
-          <p className="text-slate-400 mt-1 text-sm">
-            Connecté en tant qu'<span className="font-bold text-purple-600">{currentUser?.username}</span> (admin)
+          <p className="text-slate-500 mt-1 text-sm font-medium">
+            Connecté en tant que <span className="font-bold text-[#17203f]">{currentUser?.username}</span>
           </p>
         </div>
-        <button
+        <Button
           onClick={() => setModal({ mode: 'create' })}
-          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"
+          icon={<UserPlus size={16} />}
         >
-          <UserPlus size={18} /> Nouvel utilisateur
-        </button>
+          Nouvel utilisateur
+        </Button>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden">
-        {/* Table header */}
-        <div className="grid grid-cols-12 px-6 py-4 bg-slate-50 border-b border-slate-100 text-xs font-black text-slate-400 uppercase tracking-widest">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+
+        {/* Table header — hidden on mobile */}
+        <div className="hidden sm:grid grid-cols-12 px-6 py-4 bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-widest">
           <span className="col-span-1">#</span>
           <span className="col-span-3">Utilisateur</span>
           <span className="col-span-4">Email</span>
@@ -235,48 +219,52 @@ export default function AdminUsers() {
           <span className="col-span-2 text-right">Actions</span>
         </div>
 
-        {/* Rows */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="w-8 h-8 border-4 border-blue-400 border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-2 border-[#17203f] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : users.length === 0 ? (
-          <div className="text-center py-20 text-slate-300">
-            <User size={48} strokeWidth={1} className="mx-auto mb-3" />
-            <p className="font-medium">Aucun utilisateur trouvé</p>
+          <div className="flex flex-col items-center justify-center py-20 text-slate-300">
+            <User size={52} strokeWidth={1} className="mb-4" />
+            <p className="font-semibold text-slate-400">Aucun utilisateur</p>
           </div>
         ) : (
           users.map((u, i) => (
             <div
               key={u.id}
-              className={`grid grid-cols-12 items-center px-6 py-4 border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors ${u.id === currentUser?.id ? 'bg-blue-50/30' : ''}`}
+              className={`flex flex-col sm:grid sm:grid-cols-12 sm:items-center px-6 py-5 border-b border-slate-50 last:border-0 transition-colors hover:bg-slate-50/50
+                ${u.id === currentUser?.id ? 'bg-[#17203f]/3' : ''}`}
             >
-              <span className="col-span-1 text-slate-300 font-mono text-sm">{i + 1}</span>
+              <span className="hidden sm:block col-span-1 text-slate-300 font-mono text-sm">{i + 1}</span>
 
-              <div className="col-span-3 flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
+              <div className="col-span-3 flex items-center gap-3 mb-3 sm:mb-0">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#17203f] to-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
                   {u.username[0].toUpperCase()}
                 </div>
                 <div>
-                  <p className="font-bold text-slate-800 text-sm">{u.username}</p>
-                  {u.id === currentUser?.id && <p className="text-[10px] text-blue-500 font-medium">Vous</p>}
+                  <p className="font-bold text-[#17203f] text-sm">{u.username}</p>
+                  {u.id === currentUser?.id && (
+                    <p className="text-xs text-blue-500 font-semibold">Vous</p>
+                  )}
                 </div>
               </div>
 
-              <div className="col-span-4">
-                <p className="text-slate-500 text-sm truncate">{u.email || <span className="text-slate-300 italic">—</span>}</p>
+              <div className="col-span-4 mb-3 sm:mb-0">
+                <p className="text-slate-500 text-sm truncate">
+                  {u.email || <span className="text-slate-300 italic">Non renseigné</span>}
+                </p>
               </div>
 
-              <div className="col-span-2">
-                <span className={`px-3 py-1 rounded-full text-xs font-bold border capitalize ${ROLE_BADGE[u.role] || ROLE_BADGE.viewer}`}>
+              <div className="col-span-2 mb-3 sm:mb-0">
+                <span className={`inline-block px-3 py-1 rounded-lg text-xs font-bold border capitalize ${ROLE_BADGE[u.role] || ROLE_BADGE.viewer}`}>
                   {u.role}
                 </span>
               </div>
 
-              <div className="col-span-2 flex justify-end gap-2">
+              <div className="col-span-2 flex justify-start sm:justify-end gap-2">
                 <button
                   onClick={() => setModal({ mode: 'edit', user: u })}
-                  className="p-2 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                  className="p-2.5 rounded-xl text-slate-400 hover:text-[#17203f] hover:bg-[#17203f]/8 transition-colors"
                   title="Modifier"
                 >
                   <Pencil size={16} />
@@ -284,8 +272,8 @@ export default function AdminUsers() {
                 <button
                   onClick={() => handleDelete(u.id, u.username)}
                   disabled={deletingId === u.id || u.id === currentUser?.id}
-                  className="p-2 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                  title={u.id === currentUser?.id ? 'Vous ne pouvez pas vous supprimer' : 'Supprimer'}
+                  className="p-2.5 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  title={u.id === currentUser?.id ? 'Impossible de vous supprimer vous-même' : 'Supprimer'}
                 >
                   {deletingId === u.id
                     ? <span className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin block" />
@@ -299,17 +287,18 @@ export default function AdminUsers() {
       </div>
 
       {/* Role legend */}
-      <div className="mt-6 flex gap-4 flex-wrap">
-        <p className="text-xs text-slate-400 font-medium">Rôles :</p>
+      <div className="mt-5 flex flex-wrap gap-3 items-center">
+        <p className="text-xs text-slate-400 font-semibold">Rôles disponibles :</p>
         {ROLES.map(r => (
-          <span key={r} className={`px-3 py-1 rounded-full text-xs font-bold border capitalize ${ROLE_BADGE[r]}`}>
+          <span key={r} className={`px-3 py-1 rounded-lg text-xs font-bold border capitalize ${ROLE_BADGE[r]}`}>
             {r}
           </span>
         ))}
-        <p className="text-xs text-slate-400">— Les nouveaux utilisateurs reçoivent leur mot de passe par email.</p>
+        <p className="text-xs text-slate-400 w-full sm:w-auto sm:ml-auto">
+          Les nouveaux utilisateurs reçoivent leurs identifiants par email.
+        </p>
       </div>
 
-      {/* Modal */}
       {modal && (
         <UserModal
           mode={modal.mode}
