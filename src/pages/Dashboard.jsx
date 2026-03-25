@@ -401,53 +401,58 @@ export default function Dashboard() {
   const filteredSensors = Object.entries(historyData).sort((a, b) => a[0].localeCompare(b[0]));
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+    <div className="w-full mx-auto px-4 sm:px-6">
 
-      {/* Page header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-[#17203f] tracking-tight">Métriques système</h1>
-        <p className="text-slate-500 mt-1 text-sm font-medium">Supervision industrielle en temps réel</p>
+      {/* ── STICKY CONTROL BAR ─────────────────────────────────────────────── */}
+<div className="sticky top-0 z-20 bg-[#F8F9FB] py-2.5 -mx-4 sm:-mx-6 px-4 sm:px-6 border-b border-slate-200 shadow-sm">
+  <div className="flex flex-wrap items-center gap-3">
+    {/* Title */}
+    <h1 className="text-lg font-bold text-[#17203f] tracking-tight whitespace-nowrap">Métriques système</h1>
+    
+    {/* Time range */}
+    <div className="bg-white rounded-lg border border-slate-200 px-2 py-1">
+      <TimeRangePicker
+        mode={mode} setMode={setMode}
+        quickHours={quickHours} setQuickHours={setQuickHours}
+        customStart={customStart} setCustomStart={setCustomStart}
+        customEnd={customEnd} setCustomEnd={setCustomEnd}
+        onApply={handleApplyCustom}
+        error={rangeError}
+        compact={true}
+      />
+    </div>
+    
+    {/* Custom range indicator */}
+    {mode === 'custom' && appliedRange && (
+      <div className="flex items-center gap-1 text-xs text-[#17203f] bg-white/50 px-2 py-1 rounded">
+        <Clock size={11} />
+        <span>{new Date(appliedRange.start).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})}</span>
+        <span>-</span>
+        <span>{new Date(appliedRange.end).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})}</span>
       </div>
-
-      {/* Time range */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 mb-6">
-        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Plage temporelle</p>
-        <TimeRangePicker
-          mode={mode} setMode={setMode}
-          quickHours={quickHours} setQuickHours={setQuickHours}
-          customStart={customStart} setCustomStart={setCustomStart}
-          customEnd={customEnd} setCustomEnd={setCustomEnd}
-          onApply={handleApplyCustom}
-          error={rangeError}
-        />
-        {mode === 'custom' && appliedRange && (
-          <div className="mt-3 flex items-center gap-2 text-xs font-semibold text-[#17203f]">
-            <Clock size={13} />
-            {new Date(appliedRange.start).toLocaleString('fr-FR')} — {new Date(appliedRange.end).toLocaleString('fr-FR')}
-          </div>
-        )}
-      </div>
-
-      {/* Filters row */}
-      <div className="flex flex-wrap items-center gap-3 mb-8">
-        <div className="flex gap-2 overflow-x-auto no-scrollbar">
-          {CATEGORIES.map(cat => (
-            <CategoryTab key={cat.id} category={cat} isActive={activeCategory === cat.id} onSelect={setActiveCategory} />
-          ))}
-        </div>
-
-        <select
-          className="bg-white border-2 border-slate-200 px-4 py-2.5 rounded-xl font-semibold text-sm text-slate-600 outline-none focus:border-[#17203f] transition-colors cursor-pointer ml-auto"
-          value={zoneFilter || ''}
-          onChange={e => setZoneFilter(e.target.value ? parseInt(e.target.value) : null)}
-        >
-          <option value="">Toutes les zones</option>
-          {zones.map(z => <option key={z.id} value={z.id}>{z.nom_zone}</option>)}
-        </select>
-      </div>
+    )}
+    
+    {/* Category tabs */}
+    <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+      {CATEGORIES.map(cat => (
+        <CategoryTab key={cat.id} category={cat} isActive={activeCategory === cat.id} onSelect={setActiveCategory} compact />
+      ))}
+    </div>
+    
+    {/* Zone filter */}
+    <select
+      className="bg-white border border-slate-200 px-3 py-1 rounded-lg text-sm font-medium text-slate-600 outline-none focus:border-[#17203f] ml-auto"
+      value={zoneFilter || ''}
+      onChange={e => setZoneFilter(e.target.value ? parseInt(e.target.value) : null)}
+    >
+      <option value="">Toutes zones</option>
+      {zones.map(z => <option key={z.id} value={z.id}>{z.nom_zone}</option>)}
+    </select>
+  </div>
+</div>
 
       {/* Sensor cards */}
-      <div>
+      <div className="pb-8">
         {filteredSensors.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-28 text-slate-300">
             <Clock size={52} strokeWidth={1} className="mb-4" />

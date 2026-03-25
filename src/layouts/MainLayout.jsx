@@ -11,7 +11,7 @@ const SidebarItem = ({ to, label, active, icon: Icon }) => (
     to={to}
     className={`flex items-center gap-3 px-4 py-3 w-full rounded-xl transition-all duration-200
       ${active
-        ? "bg-white/12 text-white border-r-4 border-white/60"
+        ? "bg-white/12 text-white border-r-4 border-purple-500"
         : "text-slate-300 hover:bg-white/8 hover:text-white"
       }`}
   >
@@ -114,7 +114,7 @@ export default function MainLayout() {
       </aside>
 
       {/* ── MAIN CONTENT ────────────────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col lg:ml-52 min-h-screen">
+      <div  className="flex-1 flex flex-col lg:ml-52 h-screen overflow-hidden">
 
         {/* Desktop header */}
         <header className="hidden lg:flex items-center justify-between h-16 bg-white border-b border-slate-100 px-6 sticky top-0 z-10 shadow-sm">
@@ -171,7 +171,7 @@ export default function MainLayout() {
         )}
 
         {/* Page content */}
-        <main className="flex-1 pb-20 lg:pb-0">
+          <main className="flex-1 overflow-y-auto pb-20 lg:pb-0">
           <Outlet />
         </main>
       </div>
