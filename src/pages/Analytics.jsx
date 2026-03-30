@@ -395,12 +395,12 @@ const Analytics = () => {
               </Button>
             </div>
           </div>
-          <div className="h-80">
+          <div className="h-80" style={{ minHeight: 320 }}>
             {loadingTimeSeries ? (
               <div className="flex justify-center items-center h-full"><RefreshCw className="animate-spin text-slate-400" /></div>
             ) : timeseries.length ? (
-              <div style={{ height: '100%', width: '100%' }}>
-                <ResponsiveContainer width="100%" height="100%">
+              <div style={{ height: '100%', width: '100%', minHeight: 320 }}>
+                <ResponsiveContainer width="100%" height={320}>
                   <AreaChart data={timeseries}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="timestamp" tickFormatter={(ts) => new Date(ts).toLocaleDateString()} />
@@ -424,12 +424,12 @@ const Analytics = () => {
         {/* Zone Comparison Bar Chart */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
           <h2 className="text-lg font-bold text-[#17203f] mb-4">Comparaison par zone</h2>
-          <div className="h-80">
+          <div className="h-80" style={{ minHeight: 320 }}>
             {loadingZoneComp ? (
               <div className="flex justify-center items-center h-full"><RefreshCw className="animate-spin text-slate-400" /></div>
             ) : zoneComparison.length ? (
-              <div style={{ height: '100%', width: '100%' }}>
-                <ResponsiveContainer width="100%" height="100%">
+              <div style={{ height: '100%', width: '100%', minHeight: 320 }}>
+                <ResponsiveContainer width="100%" height={320}>
                   <BarChart data={zoneComparison} layout="vertical" margin={{ left: 80 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis type="number" domain={['auto', 'auto']} />

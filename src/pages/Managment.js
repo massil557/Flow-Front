@@ -10,7 +10,7 @@ import man         from "../imgs/icons/man.svg";
 import PlantMap    from "./PlantMap";
 import Zone        from "./Zone";
 
-const origins = 'http://127.0.0.1:8000';
+const origins = ''; // Proxy handles routing to backend
 
 export {
   Dashboard,

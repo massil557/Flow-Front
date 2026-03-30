@@ -28,7 +28,14 @@ const Zone = () => {
     const fetchSensors = async () => {
       try {
         const response = await axios.get(`${origins}/api/sensors/zone/${data?.id}`);
-        setSensores(response.data);
+        // Deduplicate by id to prevent React duplicate-key warnings
+        const seen = new Set();
+        const unique = response.data.filter(s => {
+          if (seen.has(s.id)) return false;
+          seen.add(s.id);
+          return true;
+        });
+        setSensores(unique);
       } catch (error) {
         console.error('Erreur lors de la récupération des capteurs :', error);
       }
