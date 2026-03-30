@@ -1,10 +1,621 @@
-const Analytics=() => {
+// src/pages/Analytics.jsx
+import React, { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
+import { origins } from './Managment';
+import { useAlerts } from '../hooks/useAlerts';
+import { 
+  Thermometer, Gauge, Droplets, Wind, Calendar, Download, 
+  TrendingUp, AlertTriangle, Activity, RefreshCw, ArrowRight, Send, X
+} from 'lucide-react';
+import Button from '../components/Button';
+import {
+  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, Legend, ResponsiveContainer, Area, AreaChart
+} from 'recharts';
+
+const CATEGORIES = [
+  { id: 'Température', label: 'Température', icon: Thermometer, color: '#2D5BFF', unit: '°C' },
+  { id: 'Pression',    label: 'Pression',    icon: Gauge,       color: '#A855F7', unit: 'Bar' },
+  { id: 'Humidité',    label: 'Humidité',    icon: Droplets,    color: '#0EA5E9', unit: '%' },
+  { id: 'Qualité Air', label: 'Qualité Air', icon: Wind,        color: '#22C55E', unit: 'ppm' },
+];
+
+const QUICK_OPTIONS = [
+  { label: '24h', value: 24 },
+  { label: '7j',  value: 24*7 },
+  { label: '30j', value: 24*30 },
+];
+
+function toLocalInputValue(date) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+function nowLocal() { return toLocalInputValue(new Date()); }
+function hoursAgoLocal(h) { return toLocalInputValue(new Date(Date.now() - h * 3600000)); }
+
+// Compact TimeRangePicker (same as before)
+const TimeRangePicker = ({ mode, setMode, quickHours, setQuickHours, customStart, setCustomStart, customEnd, setCustomEnd, onApply, error }) => {
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold">Analytics Page</h1>
-      <p className="text-text-sub mt-2">This is the Analytics page content.</p>
+    <div className="flex items-center gap-1.5">
+      <div className="flex items-center bg-white rounded-lg border border-slate-200">
+        {QUICK_OPTIONS.map(opt => (
+          <button
+            key={opt.label}
+            onClick={() => { setMode('quick'); setQuickHours(opt.value); }}
+            className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${
+              mode === 'quick' && quickHours === opt.value
+                ? 'bg-[#17203f] text-white'
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
+      <button
+        onClick={() => setMode(mode === 'custom' ? 'quick' : 'custom')}
+        className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-medium transition-all ${
+          mode === 'custom'
+            ? 'bg-[#17203f] text-white border-[#17203f]'
+            : 'bg-white text-slate-600 border-slate-200 hover:border-[#17203f]/50'
+        }`}
+      >
+        <Calendar size={12} />
+        Perso
+      </button>
+
+      {mode === 'custom' && (
+        <div className="flex items-center gap-1.5 bg-white border border-[#17203f]/20 rounded-lg px-2 py-1">
+          <input
+            type="datetime-local"
+            value={customStart}
+            max={customEnd || nowLocal()}
+            onChange={e => setCustomStart(e.target.value)}
+            className="text-xs font-medium text-slate-700 outline-none bg-transparent cursor-pointer border border-slate-200 rounded px-2 py-0.5"
+            style={{ fontSize: '11px' }}
+          />
+          <ArrowRight size={10} className="text-slate-300" />
+          <input
+            type="datetime-local"
+            value={customEnd}
+            min={customStart}
+            max={nowLocal()}
+            onChange={e => setCustomEnd(e.target.value)}
+            className="text-xs font-medium text-slate-700 outline-none bg-transparent cursor-pointer border border-slate-200 rounded px-2 py-0.5"
+            style={{ fontSize: '11px' }}
+          />
+          <Button onClick={onApply} disabled={!!error} size="xs">
+            OK
+          </Button>
+        </div>
+      )}
+      {error && <p className="text-xs text-red-500 font-medium">{error}</p>}
     </div>
   );
-};  
+};
+
+const Analytics = () => {
+  const [selectedCategory, setSelectedCategory] = useState('Température');
+  const [mode, setMode] = useState('quick');
+  const [quickHours, setQuickHours] = useState(24);
+  const [customStart, setCustomStart] = useState(() => hoursAgoLocal(24));
+  const [customEnd, setCustomEnd] = useState(() => nowLocal());
+  const [rangeError, setRangeError] = useState('');
+  const [loadingTimeSeries, setLoadingTimeSeries] = useState(false);
+  const [loadingZoneComp, setLoadingZoneComp] = useState(false);
+  const [timeseries, setTimeseries] = useState([]);
+  const [zoneComparison, setZoneComparison] = useState([]);
+  const [zones, setZones] = useState([]);
+  const [selectedZone, setSelectedZone] = useState(null);
+  const { activeCount } = useAlerts();
+
+  // State for report modal
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportPeriod, setReportPeriod] = useState('daily');
+  const [reportCustomStart, setReportCustomStart] = useState(() => hoursAgoLocal(24));
+  const [reportCustomEnd, setReportCustomEnd] = useState(() => nowLocal());
+  const [reportEmail, setReportEmail] = useState('');
+  const [sendingReport, setSendingReport] = useState(false);
+
+  const timeSeriesController = useRef(null);
+  const zoneCompController = useRef(null);
+  const [fetchTrigger, setFetchTrigger] = useState(0);
+  const [zoneFetchTrigger, setZoneFetchTrigger] = useState(0);
+
+  // Fetch zones once
+  useEffect(() => {
+    const fetchZones = async () => {
+      try {
+        const res = await axios.get(`${origins}/api/zones`);
+        setZones(res.data);
+      } catch (err) { console.error(err); }
+    };
+    fetchZones();
+  }, []);
+
+  // Validate custom range for main charts
+  useEffect(() => {
+    if (mode !== 'custom') {
+      setRangeError('');
+      return;
+    }
+    if (!customStart || !customEnd) {
+      setRangeError('Sélectionnez les deux dates.');
+      return;
+    }
+    if (new Date(customStart) >= new Date(customEnd)) {
+      setRangeError('La date de fin doit être après la date de début.');
+    } else {
+      setRangeError('');
+    }
+  }, [customStart, customEnd, mode]);
+
+  const getRange = () => {
+    if (mode === 'quick') {
+      return { hours: quickHours };
+    } else {
+      if (!customStart || !customEnd || rangeError) return null;
+      return {
+        start: new Date(customStart).toISOString(),
+        end: new Date(customEnd).toISOString()
+      };
+    }
+  };
+
+  const fetchZoneComparison = async () => {
+    const range = getRange();
+    if (!range) return;
+
+    if (zoneCompController.current) zoneCompController.current.abort();
+    const controller = new AbortController();
+    zoneCompController.current = controller;
+
+    setLoadingZoneComp(true);
+    try {
+      const payload = {
+        category: selectedCategory,
+        ...range,
+        interval: 'hour'
+      };
+      const res = await axios.post(`${origins}/api/analytics/zone-comparison`, payload, { signal: controller.signal });
+      if (!controller.signal.aborted) setZoneComparison(res.data);
+    } catch (err) {
+      if (err.name !== 'CanceledError' && err.name !== 'AbortError') {
+        console.error('Zone comparison fetch error:', err);
+      }
+    } finally {
+      if (!controller.signal.aborted) setLoadingZoneComp(false);
+    }
+    zoneCompController.current = null;
+  };
+
+  const fetchTimeSeries = async () => {
+    const range = getRange();
+    if (!range) return;
+
+    if (timeSeriesController.current) timeSeriesController.current.abort();
+    const controller = new AbortController();
+    timeSeriesController.current = controller;
+
+    setLoadingTimeSeries(true);
+    try {
+      const payload = {
+        category: selectedCategory,
+        ...range,
+        interval: 'hour',
+        zone_id: selectedZone || undefined
+      };
+      const res = await axios.post(`${origins}/api/analytics/timeseries`, payload, { signal: controller.signal });
+      if (!controller.signal.aborted) setTimeseries(res.data);
+    } catch (err) {
+      if (err.name !== 'CanceledError' && err.name !== 'AbortError') {
+        console.error('Time series fetch error:', err);
+      }
+    } finally {
+      if (!controller.signal.aborted) setLoadingTimeSeries(false);
+    }
+    timeSeriesController.current = null;
+  };
+
+  useEffect(() => {
+    fetchZoneComparison();
+  }, [zoneFetchTrigger, selectedCategory, mode, quickHours, customStart, customEnd, rangeError]);
+
+  useEffect(() => {
+    fetchTimeSeries();
+  }, [fetchTrigger, selectedCategory, mode, quickHours, customStart, customEnd, rangeError, selectedZone]);
+
+  const handleApplyCustom = () => {
+    if (rangeError) return;
+    setFetchTrigger(prev => prev + 1);
+    setZoneFetchTrigger(prev => prev + 1);
+  };
+
+  const handleQuickChange = (hours) => {
+    setMode('quick');
+    setQuickHours(hours);
+    setFetchTrigger(prev => prev + 1);
+    setZoneFetchTrigger(prev => prev + 1);
+  };
+
+  const toggleMode = () => {
+    setMode(mode === 'custom' ? 'quick' : 'custom');
+  };
+
+  const exportCSV = () => {
+    if (!timeseries.length) return;
+    const headers = ['Timestamp', 'Avg Value', 'Min', 'Max', 'Count'];
+    const rows = timeseries.map(p => [
+      new Date(p.timestamp).toLocaleString(),
+      p.avg_value.toFixed(2),
+      p.min_value.toFixed(2),
+      p.max_value.toFixed(2),
+      p.count
+    ]);
+    const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.setAttribute('download', `analytics_${selectedCategory}_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Send report
+  const handleSendReport = async () => {
+    setSendingReport(true);
+    try {
+      let payload = {};
+      if (reportPeriod === 'custom') {
+        payload = {
+          start: new Date(reportCustomStart).toISOString(),
+          end: new Date(reportCustomEnd).toISOString(),
+        };
+      } else {
+        payload = { period: reportPeriod };
+      }
+      if (reportEmail.trim()) {
+        payload.recipients = [reportEmail];
+      }
+      const res = await axios.post(`${origins}/api/reports/send`, payload);
+      alert(`Rapport envoyé avec succès à ${res.data.message.split('to ')[1]}`);
+      setShowReportModal(false);
+    } catch (err) {
+      console.error(err);
+      alert("Erreur lors de l'envoi du rapport.");
+    } finally {
+      setSendingReport(false);
+    }
+  };
+
+  const activeCategory = CATEGORIES.find(c => c.id === selectedCategory);
+  const Icon = activeCategory?.icon;
+
+  const totalAlerts = activeCount;
+  const avgValue = timeseries.length ? (timeseries.reduce((sum, p) => sum + p.avg_value, 0) / timeseries.length).toFixed(1) : '-';
+  const worstZone = zoneComparison.length ? zoneComparison.reduce((max, z) => (z.avg_value > max.avg_value ? z : max), zoneComparison[0]) : null;
+  const overallTrend = timeseries.length > 1 
+    ? (timeseries[timeseries.length-1].avg_value > timeseries[0].avg_value ? 'Hausse' : 'Baisse')
+    : '-';
+
+  return (
+    <div className="w-full mx-auto px-4 sm:px-6 py-6">
+      {/* Sticky header (dashboard style) */}
+      <div className="sticky top-0 z-20 bg-[#F8F9FB] py-2.5 -mx-4 sm:-mx-6 px-4 sm:px-6 border-b border-slate-200 shadow-sm mb-6">
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-lg font-bold text-[#17203f] tracking-tight whitespace-nowrap">Analytiques avancées</h1>
+          <div className="bg-white rounded-lg border border-slate-200 px-2 py-1">
+            <TimeRangePicker
+              mode={mode}
+              setMode={setMode}
+              quickHours={quickHours}
+              setQuickHours={setQuickHours}
+              customStart={customStart}
+              setCustomStart={setCustomStart}
+              customEnd={customEnd}
+              setCustomEnd={setCustomEnd}
+              onApply={handleApplyCustom}
+              error={rangeError}
+            />
+          </div>
+          <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+            {CATEGORIES.map(cat => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-semibold text-xs transition-all ${
+                  selectedCategory === cat.id
+                    ? 'bg-[#17203f] text-white border-[#17203f] shadow-sm'
+                    : 'bg-white text-slate-600 border-slate-200 hover:border-[#17203f]/40 hover:text-[#17203f]'
+                }`}
+              >
+                <cat.icon size={13} className="shrink-0" />
+                <span className="whitespace-nowrap">{cat.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Metric Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <MetricCard
+          title="Alertes actives"
+          value={totalAlerts}
+          icon={<AlertTriangle size={20} />}
+          color="bg-amber-50 text-amber-600"
+        />
+        <MetricCard
+          title={`Valeur moyenne (${activeCategory?.unit})`}
+          value={avgValue !== '-' ? `${avgValue} ${activeCategory?.unit}` : '-'}
+          icon={Icon && <Icon size={20} />}
+          color="bg-indigo-50 text-indigo-600"
+        />
+        <MetricCard
+          title="Zone la plus élevée"
+          value={worstZone ? worstZone.zone_name : '-'}
+          subtitle={worstZone ? `${worstZone.avg_value.toFixed(1)} ${activeCategory?.unit}` : ''}
+          icon={<TrendingUp size={20} />}
+          color="bg-emerald-50 text-emerald-600"
+        />
+        <MetricCard
+          title="Tendance générale"
+          value={overallTrend}
+          icon={<Activity size={20} />}
+          color="bg-slate-100 text-slate-600"
+        />
+      </div>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {/* Time Series Chart */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold text-[#17203f]">Évolution dans le temps</h2>
+              <select
+                className="bg-white border border-slate-200 px-2 py-1 rounded-md text-sm font-medium text-slate-600 outline-none focus:border-[#17203f] transition-colors cursor-pointer"
+                value={selectedZone || ''}
+                onChange={e => setSelectedZone(e.target.value ? parseInt(e.target.value) : null)}
+              >
+                <option value="">Toutes zones</option>
+                {zones.map(z => <option key={z.id} value={z.id}>{z.nom_zone}</option>)}
+              </select>
+            </div>
+            <div className="flex gap-2">
+              <Button size="xs" variant="ghost" onClick={exportCSV} disabled={!timeseries.length} icon={<Download size={14} />}>
+                Exporter CSV
+              </Button>
+              <Button size="xs" variant="primary" onClick={() => setShowReportModal(true)} icon={<Send size={14} />}>
+                Envoyer rapport
+              </Button>
+            </div>
+          </div>
+          <div className="h-80">
+            {loadingTimeSeries ? (
+              <div className="flex justify-center items-center h-full"><RefreshCw className="animate-spin text-slate-400" /></div>
+            ) : timeseries.length ? (
+              <div style={{ height: '100%', width: '100%' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={timeseries}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="timestamp" tickFormatter={(ts) => new Date(ts).toLocaleDateString()} />
+                    <YAxis domain={['auto', 'auto']} />
+                    <Tooltip labelFormatter={(ts) => new Date(ts).toLocaleString()} formatter={(value) => `${value.toFixed(2)} ${activeCategory?.unit}`} />
+                    <Legend />
+                    <Area type="monotone" dataKey="avg_value" stroke={activeCategory?.color} fill={activeCategory?.color + '20'} name="Moyenne" />
+                    <Line type="monotone" dataKey="min_value" stroke="#94a3b8" strokeDasharray="5 5" name="Min" dot={false} />
+                    <Line type="monotone" dataKey="max_value" stroke="#94a3b8" strokeDasharray="5 5" name="Max" dot={false} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="flex justify-center items-center h-full text-slate-400">
+                {selectedZone ? "Aucune donnée pour cette zone" : "Aucune donnée pour cette période"}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Zone Comparison Bar Chart */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
+          <h2 className="text-lg font-bold text-[#17203f] mb-4">Comparaison par zone</h2>
+          <div className="h-80">
+            {loadingZoneComp ? (
+              <div className="flex justify-center items-center h-full"><RefreshCw className="animate-spin text-slate-400" /></div>
+            ) : zoneComparison.length ? (
+              <div style={{ height: '100%', width: '100%' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={zoneComparison} layout="vertical" margin={{ left: 80 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" domain={['auto', 'auto']} />
+                    <YAxis type="category" dataKey="zone_name" width={80} />
+                    <Tooltip formatter={(value) => `${value.toFixed(2)} ${activeCategory?.unit}`} />
+                    <Legend />
+                    <Bar dataKey="avg_value" fill={activeCategory?.color} name="Moyenne" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="flex justify-center items-center h-full text-slate-400">Aucune donnée pour cette période</div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Data Table */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
+          <h2 className="text-sm font-bold text-[#17203f]">Détails des mesures (moyennes par intervalle)</h2>
+        </div>
+        <div className="overflow-x-auto max-h-64">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="text-left py-2 px-4 font-semibold text-slate-600">Période</th>
+                <th className="text-left py-2 px-4 font-semibold text-slate-600">Moyenne</th>
+                <th className="text-left py-2 px-4 font-semibold text-slate-600">Min</th>
+                <th className="text-left py-2 px-4 font-semibold text-slate-600">Max</th>
+                <th className="text-left py-2 px-4 font-semibold text-slate-600">Nombre de mesures</th>
+              </tr>
+            </thead>
+            <tbody>
+              {timeseries.slice().reverse().map((point, idx) => (
+                <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50">
+                  <td className="py-2 px-4 text-slate-700">{new Date(point.timestamp).toLocaleString()}</td>
+                  <td className="py-2 px-4 text-slate-700">{point.avg_value.toFixed(2)} {activeCategory?.unit}</td>
+                  <td className="py-2 px-4 text-slate-700">{point.min_value.toFixed(2)} {activeCategory?.unit}</td>
+                  <td className="py-2 px-4 text-slate-700">{point.max_value.toFixed(2)} {activeCategory?.unit}</td>
+                  <td className="py-2 px-4 text-slate-700">{point.count}</td>
+                </tr>
+              ))}
+              {!timeseries.length && (
+                <tr><td colSpan="5" className="py-8 text-center text-slate-400">Aucune donnée</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Report Modal */}
+      {showReportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative">
+            <button
+              onClick={() => setShowReportModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 transition-colors"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="mb-4">
+              <h2 className="text-xl font-bold text-[#17203f]">Envoyer un rapport</h2>
+              <p className="text-sm text-slate-500">Choisissez la période et le destinataire</p>
+            </div>
+
+            <div className="space-y-4">
+              {/* Period selection */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Période</label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setReportPeriod('daily')}
+                    className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium transition-all ${
+                      reportPeriod === 'daily'
+                        ? 'bg-[#17203f] text-white border-[#17203f]'
+                        : 'bg-white text-slate-600 border-slate-200 hover:border-[#17203f]/50'
+                    }`}
+                  >
+                    Quotidien
+                  </button>
+                  <button
+                    onClick={() => setReportPeriod('weekly')}
+                    className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium transition-all ${
+                      reportPeriod === 'weekly'
+                        ? 'bg-[#17203f] text-white border-[#17203f]'
+                        : 'bg-white text-slate-600 border-slate-200 hover:border-[#17203f]/50'
+                    }`}
+                  >
+                    Hebdomadaire
+                  </button>
+                  <button
+                    onClick={() => setReportPeriod('monthly')}
+                    className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium transition-all ${
+                      reportPeriod === 'monthly'
+                        ? 'bg-[#17203f] text-white border-[#17203f]'
+                        : 'bg-white text-slate-600 border-slate-200 hover:border-[#17203f]/50'
+                    }`}
+                  >
+                    Mensuel
+                  </button>
+                  <button
+                    onClick={() => setReportPeriod('custom')}
+                    className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium transition-all ${
+                      reportPeriod === 'custom'
+                        ? 'bg-[#17203f] text-white border-[#17203f]'
+                        : 'bg-white text-slate-600 border-slate-200 hover:border-[#17203f]/50'
+                    }`}
+                  >
+                    Perso
+                  </button>
+                </div>
+              </div>
+
+              {/* Custom date range */}
+              {reportPeriod === 'custom' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">Début</label>
+                    <input
+                      type="datetime-local"
+                      value={reportCustomStart}
+                      onChange={e => setReportCustomStart(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">Fin</label>
+                    <input
+                      type="datetime-local"
+                      value={reportCustomEnd}
+                      onChange={e => setReportCustomEnd(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Email field */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Email destinataire (optionnel)</label>
+                <input
+                  type="email"
+                  value={reportEmail}
+                  onChange={e => setReportEmail(e.target.value)}
+                  placeholder="ex: manager@cevital.dz"
+                  className="w-full px-4 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm outline-none focus:border-[#17203f] transition-colors"
+                />
+                <p className="text-xs text-slate-400 mt-1">Si vide, le rapport sera envoyé à l'email configuré dans le système.</p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <Button
+                variant="ghost"
+                onClick={() => setShowReportModal(false)}
+                fullWidth
+              >
+                Annuler
+              </Button>
+              <Button
+                onClick={handleSendReport}
+                loading={sendingReport}
+                icon={<Send size={14} />}
+                fullWidth
+              >
+                Envoyer
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const MetricCard = ({ title, value, subtitle, icon, color }) => (
+  <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+    <div className="flex items-center justify-between mb-2">
+      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{title}</span>
+      <div className={`p-2 rounded-lg ${color}`}>{icon}</div>
+    </div>
+    <div className="text-2xl font-bold text-[#17203f]">{value}</div>
+    {subtitle && <div className="text-xs text-slate-400 mt-1">{subtitle}</div>}
+  </div>
+);
 
 export default Analytics;

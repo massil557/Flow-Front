@@ -1,3 +1,4 @@
+// src/pages/Managment.js
 import Dashboard  from "./Dashboard";
 import Analytics  from "./Analytics";
 import Alerts     from "./Alerts";
@@ -12,8 +13,15 @@ import Zone        from "./Zone";
 const origins = 'http://127.0.0.1:8000';
 
 export {
-  Dashboard, Analytics, Alerts, LoginPage,
+  Dashboard,
+  Analytics,
+  Alerts,
+  LoginPage,
   AdminUsers,
-  cevitalLogo, flow, man, origins,
-  PlantMap, Zone,
+  cevitalLogo,
+  flow,
+  man,
+  origins,
+  PlantMap,
+  Zone,
 };

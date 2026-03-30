@@ -9,6 +9,8 @@ import { origins } from './Managment';
 const scrollStyles = `
   .chart-scroll::-webkit-scrollbar { display: none; }
   .chart-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 `;
 
 const CATEGORIES = [
@@ -42,9 +44,26 @@ function toLocalISO(localStr) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00${sign}${hh}:${mm}`;
 }
 
-// ── Category tab ──────────────────────────────────────────────────────────────
-const CategoryTab = ({ category, isActive, onSelect }) => {
+// ── Category tab (compact) ────────────────────────────────────────────────────
+const CategoryTab = ({ category, isActive, onSelect, compact = false }) => {
   const Icon = category.icon;
+  
+  if (compact) {
+    return (
+      <button
+        onClick={() => onSelect(category.id)}
+        className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-semibold text-xs transition-all duration-200 cursor-pointer
+          ${isActive
+            ? 'bg-[#17203f] text-white border-[#17203f] shadow-sm'
+            : 'bg-white text-slate-600 border-slate-200 hover:border-[#17203f]/40 hover:text-[#17203f]'
+          }`}
+      >
+        <Icon size={13} className="shrink-0" />
+        <span className="whitespace-nowrap">{category.label}</span>
+      </button>
+    );
+  }
+  
   return (
     <button
       onClick={() => onSelect(category.id)}
@@ -60,7 +79,7 @@ const CategoryTab = ({ category, isActive, onSelect }) => {
   );
 };
 
-// ── Sensor card ───────────────────────────────────────────────────────────────
+// ── Sensor card (unchanged) ─────────────────────────────────────────────────
 const SensorCard = ({ sensorKey, sensorData, categoryColor, categoryUnit, critValue }) => {
   const [loadingReport, setLoadingReport] = useState(false);
   const [sendingEmail, setSendingEmail]   = useState(false);
@@ -150,7 +169,6 @@ const SensorCard = ({ sensorKey, sensorData, categoryColor, categoryUnit, critVa
       ${isOverThreshold ? 'border-red-200' : 'border-slate-100'}`}>
       <style>{scrollStyles}</style>
 
-      {/* Card header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 pb-4 border-b border-slate-100">
         <div className="flex items-center gap-5">
           <div className="flex flex-col">
@@ -184,7 +202,6 @@ const SensorCard = ({ sensorKey, sensorData, categoryColor, categoryUnit, critVa
         </Button>
       </div>
 
-      {/* Chart */}
       <div className="p-4 sm:p-6">
         <div
           id={`chart-${sensorKey}`}
@@ -197,7 +214,6 @@ const SensorCard = ({ sensorKey, sensorData, categoryColor, categoryUnit, critVa
         </div>
       </div>
 
-      {/* Email modal */}
       {emailModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 relative">
@@ -262,11 +278,72 @@ const SensorCard = ({ sensorKey, sensorData, categoryColor, categoryUnit, critVa
   );
 };
 
-// ── Time range picker ─────────────────────────────────────────────────────────
-function TimeRangePicker({ mode, setMode, quickHours, setQuickHours, customStart, setCustomStart, customEnd, setCustomEnd, onApply, error }) {
+// ── Compact TimeRangePicker (same as analytics) ──────────────────────────────
+function TimeRangePicker({ mode, setMode, quickHours, setQuickHours, customStart, setCustomStart, customEnd, setCustomEnd, onApply, error, compact = false }) {
+  if (compact) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <div className="flex items-center bg-white rounded-lg border border-slate-200">
+          {QUICK_OPTIONS.map(opt => (
+            <button
+              key={opt.label}
+              onClick={() => { setMode('quick'); setQuickHours(opt.value); }}
+              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${
+                mode === 'quick' && quickHours === opt.value
+                  ? 'bg-[#17203f] text-white'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={() => setMode(mode === 'custom' ? 'quick' : 'custom')}
+          className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-medium transition-all ${
+            mode === 'custom'
+              ? 'bg-[#17203f] text-white border-[#17203f]'
+              : 'bg-white text-slate-600 border-slate-200 hover:border-[#17203f]/50'
+          }`}
+        >
+          <Calendar size={12} />
+          Perso
+        </button>
+
+        {mode === 'custom' && (
+          <div className="flex items-center gap-1.5 bg-white border border-[#17203f]/20 rounded-lg px-2 py-1">
+            <input
+              type="datetime-local"
+              value={customStart}
+              max={customEnd || nowLocal()}
+              onChange={e => setCustomStart(e.target.value)}
+              className="text-xs font-medium text-slate-700 outline-none bg-transparent cursor-pointer border border-slate-200 rounded px-2 py-0.5"
+              style={{ fontSize: '11px' }}
+            />
+            <ArrowRight size={10} className="text-slate-300" />
+            <input
+              type="datetime-local"
+              value={customEnd}
+              min={customStart}
+              max={nowLocal()}
+              onChange={e => setCustomEnd(e.target.value)}
+              className="text-xs font-medium text-slate-700 outline-none bg-transparent cursor-pointer border border-slate-200 rounded px-2 py-0.5"
+              style={{ fontSize: '11px' }}
+            />
+            <Button onClick={onApply} disabled={!!error} size="xs">
+              OK
+            </Button>
+          </div>
+        )}
+        {error && <p className="text-xs text-red-500 font-medium">{error}</p>}
+      </div>
+    );
+  }
+
+  // Original non‑compact (kept for completeness)
   return (
     <div className="flex flex-wrap items-center gap-3">
-      {/* Quick presets */}
       <div className="flex items-center bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm">
         {QUICK_OPTIONS.map(opt => (
           <button
@@ -283,7 +360,6 @@ function TimeRangePicker({ mode, setMode, quickHours, setQuickHours, customStart
         ))}
       </div>
 
-      {/* Custom range toggle */}
       <button
         onClick={() => setMode(mode === 'custom' ? 'quick' : 'custom')}
         className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 font-semibold text-sm transition-all ${
@@ -397,70 +473,65 @@ export default function Dashboard() {
     if (sensorsMeta.length) loadHistory();
   }, [activeCategory, zoneFilter, quickHours, appliedRange, sensorsMeta, mode]);
 
-  const activeCat       = CATEGORIES.find(c => c.id === activeCategory);
-  const filteredSensors = Object.entries(historyData).sort((a, b) => a[0].localeCompare(b[0]));
+  const activeCat = CATEGORIES.find(c => c.id === activeCategory);
+  const sensorsWithData = Object.entries(historyData)
+    .filter(([_, data]) => data && data.length > 0)
+    .sort((a, b) => a[0].localeCompare(b[0]));
 
   return (
     <div className="w-full mx-auto px-4 sm:px-6">
 
-      {/* ── STICKY CONTROL BAR ─────────────────────────────────────────────── */}
-<div className="sticky top-0 z-20 bg-[#F8F9FB] py-2.5 -mx-4 sm:-mx-6 px-4 sm:px-6 border-b border-slate-200 shadow-sm">
-  <div className="flex flex-wrap items-center gap-3">
-    {/* Title */}
-    <h1 className="text-lg font-bold text-[#17203f] tracking-tight whitespace-nowrap">Métriques système</h1>
-    
-    {/* Time range */}
-    <div className="bg-white rounded-lg border border-slate-200 px-2 py-1">
-      <TimeRangePicker
-        mode={mode} setMode={setMode}
-        quickHours={quickHours} setQuickHours={setQuickHours}
-        customStart={customStart} setCustomStart={setCustomStart}
-        customEnd={customEnd} setCustomEnd={setCustomEnd}
-        onApply={handleApplyCustom}
-        error={rangeError}
-        compact={true}
-      />
-    </div>
-    
-    {/* Custom range indicator */}
-    {mode === 'custom' && appliedRange && (
-      <div className="flex items-center gap-1 text-xs text-[#17203f] bg-white/50 px-2 py-1 rounded">
-        <Clock size={11} />
-        <span>{new Date(appliedRange.start).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})}</span>
-        <span>-</span>
-        <span>{new Date(appliedRange.end).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})}</span>
+      {/* ── STICKY HEADER (exactly as Analytics) ────────────────────────── */}
+      <div className="sticky top-0 z-20 bg-[#F8F9FB] py-2.5 -mx-4 sm:-mx-6 px-4 sm:px-6 border-b border-slate-200 shadow-sm mb-6">
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-lg font-bold text-[#17203f] tracking-tight whitespace-nowrap">Métriques système</h1>
+          <div className="bg-white rounded-lg border border-slate-200 px-2 py-1">
+            <TimeRangePicker
+              mode={mode} setMode={setMode}
+              quickHours={quickHours} setQuickHours={setQuickHours}
+              customStart={customStart} setCustomStart={setCustomStart}
+              customEnd={customEnd} setCustomEnd={setCustomEnd}
+              onApply={handleApplyCustom}
+              error={rangeError}
+              compact={true}
+            />
+          </div>
+          <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+            {CATEGORIES.map(cat => (
+              <CategoryTab key={cat.id} category={cat} isActive={activeCategory === cat.id} onSelect={setActiveCategory} compact />
+            ))}
+          </div>
+          <select
+            className="bg-white border border-slate-200 px-3 py-1 rounded-lg text-sm font-medium text-slate-600 outline-none focus:border-[#17203f] ml-auto"
+            value={zoneFilter || ''}
+            onChange={e => setZoneFilter(e.target.value ? parseInt(e.target.value) : null)}
+          >
+            <option value="">Toutes zones</option>
+            {zones.map(z => <option key={z.id} value={z.id}>{z.nom_zone}</option>)}
+          </select>
+        </div>
+        {mode === 'custom' && appliedRange && (
+          <div className="mt-2 flex items-center gap-1 text-xs text-[#17203f] bg-white/50 px-2 py-1 rounded">
+            <Clock size={11} />
+            <span>{new Date(appliedRange.start).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})}</span>
+            <span>-</span>
+            <span>{new Date(appliedRange.end).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})}</span>
+          </div>
+        )}
       </div>
-    )}
-    
-    {/* Category tabs */}
-    <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
-      {CATEGORIES.map(cat => (
-        <CategoryTab key={cat.id} category={cat} isActive={activeCategory === cat.id} onSelect={setActiveCategory} compact />
-      ))}
-    </div>
-    
-    {/* Zone filter */}
-    <select
-      className="bg-white border border-slate-200 px-3 py-1 rounded-lg text-sm font-medium text-slate-600 outline-none focus:border-[#17203f] ml-auto"
-      value={zoneFilter || ''}
-      onChange={e => setZoneFilter(e.target.value ? parseInt(e.target.value) : null)}
-    >
-      <option value="">Toutes zones</option>
-      {zones.map(z => <option key={z.id} value={z.id}>{z.nom_zone}</option>)}
-    </select>
-  </div>
-</div>
 
-      {/* Sensor cards */}
       <div className="pb-8">
-        {filteredSensors.length === 0 ? (
+        {sensorsWithData.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-28 text-slate-300">
             <Clock size={52} strokeWidth={1} className="mb-4" />
-            <p className="font-semibold text-slate-400 text-lg">Aucune donnée pour cette plage</p>
-            <p className="text-slate-300 text-sm mt-1">Modifiez les filtres ou la plage temporelle</p>
+            <p className="font-semibold text-slate-400 text-lg">Aucune donnée disponible</p>
+            <p className="text-slate-300 text-sm mt-1 text-center max-w-md">
+              Aucune mesure enregistrée pour la période sélectionnée.<br />
+              Essayez d'élargir la plage temporelle ou modifiez les filtres.
+            </p>
           </div>
         ) : (
-          filteredSensors.map(([key, data]) => (
+          sensorsWithData.map(([key, data]) => (
             <SensorCard
               key={key}
               sensorKey={key}

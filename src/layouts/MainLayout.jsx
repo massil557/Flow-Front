@@ -1,10 +1,13 @@
 // src/layouts/MainLayout.jsx
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { LayoutGrid, Activity, Bell, Search, User, ShieldCheck, LogOut, Map } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cevitalLogo } from "../pages/Managment";
 import Logo from "../components/logo";
 import { useAuth } from "../context/AuthContext";
+import { useAlerts } from '../hooks/useAlerts';
+import { requestNotificationPermission, showBrowserNotification } from '../utils/notifications';
+import NotificationToast from '../components/NotificationToast';
 
 const SidebarItem = ({ to, label, active, icon: Icon }) => (
   <Link
@@ -36,6 +39,25 @@ export default function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchOpen, setSearchOpen] = useState(false);
+  const [activeNotifications, setActiveNotifications] = useState([]);
+
+  const { activeCount, newAlert } = useAlerts();
+
+  // Request permission on mount (optional - for browser notifications)
+  useEffect(() => {
+    requestNotificationPermission();
+  }, []);
+
+  // Handle new alerts
+  useEffect(() => {
+    if (newAlert) {
+      setActiveNotifications(prev => [...prev, newAlert]);
+    }
+  }, [newAlert]);
+
+  const removeNotification = (alertId) => {
+    setActiveNotifications(prev => prev.filter(n => n.id !== alertId));
+  };
 
   const isAdmin        = user?.role === 'admin';
   const isAutomatician = user?.role === 'automatician' || isAdmin;
@@ -82,13 +104,34 @@ export default function MainLayout() {
         {/* Nav */}
         <nav className="flex flex-col gap-0.5 px-3 flex-1 overflow-y-auto">
           {navItems.map(item => (
-            <SidebarItem
-              key={item.to}
-              icon={item.icon}
-              label={item.label}
-              to={item.to}
-              active={isActive(item.to)}
-            />
+            item.label === 'Alertes' ? (
+              <div key={item.to} className="relative">
+                <SidebarItem
+                  icon={item.icon}
+                  label={item.label}
+                  to={item.to}
+                  active={isActive(item.to)}
+                />
+                {activeCount > 0 && (
+                  <div className="absolute top-2 right-2">
+                    <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm rounded-lg px-2 py-0.5 border border-white/20">
+                      <div className="w-1.5 h-1.5 bg-amber-400 rounded-full shadow-sm"></div>
+                      <span className="text-[11px] font-medium text-white/90">
+                        {activeCount > 99 ? '99+' : activeCount}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <SidebarItem
+                key={item.to}
+                icon={item.icon}
+                label={item.label}
+                to={item.to}
+                active={isActive(item.to)}
+              />
+            )
           ))}
 
           {isAdmin && (
@@ -114,7 +157,7 @@ export default function MainLayout() {
       </aside>
 
       {/* ── MAIN CONTENT ────────────────────────────────────────────────────── */}
-      <div  className="flex-1 flex flex-col lg:ml-52 h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col lg:ml-52 h-screen overflow-hidden">
 
         {/* Desktop header */}
         <header className="hidden lg:flex items-center justify-between h-16 bg-white border-b border-slate-100 px-6 sticky top-0 z-10 shadow-sm">
@@ -171,7 +214,7 @@ export default function MainLayout() {
         )}
 
         {/* Page content */}
-          <main className="flex-1 overflow-y-auto pb-20 lg:pb-0">
+        <main className="flex-1 overflow-y-auto pb-20 lg:pb-0">
           <Outlet />
         </main>
       </div>
@@ -180,13 +223,33 @@ export default function MainLayout() {
       <nav className="fixed bottom-0 left-0 right-0 lg:hidden bg-white border-t border-slate-200 z-40 shadow-lg">
         <div className="flex items-stretch h-16 px-2">
           {navItems.map(item => (
-            <MobileNavItem
-              key={item.to}
-              icon={item.icon}
-              label={item.label}
-              to={item.to}
-              active={isActive(item.to)}
-            />
+            item.label === 'Alertes' ? (
+              <Link
+                key={item.to}
+                to={item.to}
+                className="relative flex flex-col items-center justify-center gap-1 flex-1 py-2 transition-all duration-200"
+              >
+                <Bell size={22} strokeWidth={isActive(item.to) ? 2.5 : 1.8} />
+                {activeCount > 0 && (
+                  <div className="absolute -top-1 right-1/4">
+                    <div className="bg-white/90 backdrop-blur-sm rounded-md px-1.5 py-0.5 shadow-sm border border-slate-200">
+                      <span className="text-[9px] font-medium text-slate-600">
+                        {activeCount > 99 ? '99+' : activeCount}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                <span className="text-[10px] font-semibold">Alertes</span>
+              </Link>
+            ) : (
+              <MobileNavItem
+                key={item.to}
+                icon={item.icon}
+                label={item.label}
+                to={item.to}
+                active={isActive(item.to)}
+              />
+            )
           ))}
           {isAdmin && (
             <MobileNavItem
@@ -204,6 +267,15 @@ export default function MainLayout() {
           />
         </div>
       </nav>
+
+      {/* Notification toasts */}
+      {activeNotifications.map(alert => (
+        <NotificationToast
+          key={alert.id}
+          alert={alert}
+          onClose={() => removeNotification(alert.id)}
+        />
+      ))}
     </div>
   );
 }

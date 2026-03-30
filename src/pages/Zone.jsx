@@ -1,132 +1,15 @@
-// import { useLocation } from 'react-router-dom';
-// import Sensor from '../components/sensor';
-// import { useEffect ,useState} from 'react';
-// import axios from 'axios';
-// import { origins } from './Managment';
-
-
-// const Zone = () => {
-
-//   const [sensores, setSensores] = useState([]);
-//   const [showForm, setShowForm] = useState(false);
-//   const [newSensor, setNewSensor] = useState({
-//     code_unique: '',
-//     type_grandeur: '',
-//     unite: '',
-//     adresse_ip: ''
-//   });
-
-//   const location = useLocation();
-//   const data = location.state; 
-
-// useEffect(() => {
-//   const fetchSensors = async () => {
-//     try {
-//       const response = await axios.get(`${origins}/api/sensors/zone/${data?.id}`);
-//       setSensores(response.data);
-//       console.log('Capteurs récupérés :', sensores);
-//     } catch (error) {
-//       console.error('Erreur lors de la récupération des capteurs :', error);
-//     }
-//   }
-//   fetchSensors();
-
-// },[data?.id]);
-
-// // creation handler
-// const handleCreate = async (e) => {
-//   e.preventDefault();
-//   try {
-//     const payload = {...newSensor, zone_id: data.id};
-//     const res = await axios.post(`${origins}/api/sensors`, payload);
-//     setSensores(prev => [...prev, res.data]);
-//     setShowForm(false);
-//     setNewSensor({ code_unique:'', type_grandeur:'', unite:'', adresse_ip:''});
-//   } catch (err) {
-//     console.error('Erreur création capteur', err);
-//   }
-// };
-
-//   return (
-//     <div>
-//       <div className="flex items-center justify-between">
-//         <h1 className='text-3xl text-slate-800 mb-[20px]'>Zone {data?.name}</h1>
-//         <button
-//           className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition"
-//           onClick={() => setShowForm(true)}
-//         >Ajouter un capteur</button>
-//       </div>
-
-//       {/* formulaire d'ajout */}
-//       {showForm && (
-//         <form onSubmit={handleCreate} className="mb-6 p-4 bg-white rounded-lg shadow-sm">
-//           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//             <input
-//               required
-//               placeholder="Code unique"
-//               value={newSensor.code_unique}
-//               onChange={e => setNewSensor({...newSensor, code_unique: e.target.value})}
-//               className="border p-2 rounded w-full"
-//             />
-//             <input
-//               required
-//               placeholder="Type de grandeur"
-//               value={newSensor.type_grandeur}
-//               onChange={e => setNewSensor({...newSensor, type_grandeur: e.target.value})}
-//               className="border p-2 rounded w-full"
-//             />
-//             <input
-//               required
-//               placeholder="Unité"
-//               value={newSensor.unite}
-//               onChange={e => setNewSensor({...newSensor, unite: e.target.value})}
-//               className="border p-2 rounded w-full"
-//             />
-//             <input
-//               required
-//               placeholder="Adresse IP"
-//               value={newSensor.adresse_ip}
-//               onChange={e => setNewSensor({...newSensor, adresse_ip: e.target.value})}
-//               className="border p-2 rounded w-full"
-//             />
-//           </div>
-//           <div className="mt-4 flex gap-2">
-//             <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition">
-//               Créer
-//             </button>
-//             <button
-//               type="button"
-//               className="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400 transition"
-//               onClick={() => setShowForm(false)}
-//             >Annuler</button>
-//           </div>
-//         </form>
-//       )}
-
-//       <div className='w-full h-[300px] overflow-auto'>
-//         {/* flex container so individual sensors (200px wide) can sit side‑by‑side */}
-//         <div className='flex flex-wrap gap-4'>
-//           {sensores.map(sensor => (
-//             <Sensor key={sensor.id} sensor={sensor} onToggle={(updated)=>{
-//                 setSensores(prev=> prev.map(s=> s.id===updated.id?updated:s));
-//             }} />
-//           ))}
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
-// export default Zone;
-
+// src/pages/Zone.jsx
 import { useLocation } from 'react-router-dom';
 import Sensor from '../components/sensor';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { origins } from './Managment';
+import { Activity, AlertTriangle, Plus, X, Check } from 'lucide-react';
 
 const Zone = () => {
   const [sensores, setSensores] = useState([]);
   const [showForm, setShowForm] = useState(false);
+  const [zoneStats, setZoneStats] = useState(null);
   const [newSensor, setNewSensor] = useState({
     code_unique: '',
     type_grandeur: '',
@@ -153,6 +36,20 @@ const Zone = () => {
     if (data?.id) fetchSensors();
   }, [data?.id]);
 
+  // Fetch zone statistics
+  useEffect(() => {
+    const fetchZoneStats = async () => {
+      if (!data?.id) return;
+      try {
+        const res = await axios.get(`${origins}/api/zones/${data.id}/stats`);
+        setZoneStats(res.data);
+      } catch (err) {
+        console.error('Error fetching zone stats:', err);
+      }
+    };
+    fetchZoneStats();
+  }, [data?.id]);
+
   const handleCreate = async (e) => {
     e.preventDefault();
     try {
@@ -161,6 +58,9 @@ const Zone = () => {
       setSensores(prev => [...prev, res.data]);
       setShowForm(false);
       setNewSensor({ code_unique: '', type_grandeur: '', unite: '', adresse_ip: '' });
+      // Refresh zone stats after adding sensor
+      const statsRes = await axios.get(`${origins}/api/zones/${data.id}/stats`);
+      setZoneStats(statsRes.data);
     } catch (err) {
       console.error('Erreur création capteur', err);
     }
@@ -168,13 +68,38 @@ const Zone = () => {
 
   return (
     <div className="p-4">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className='text-3xl font-bold text-slate-800'>Zone {data?.name}</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-800">Zone {data?.name}</h1>
+          <div className="flex gap-4 mt-2">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                <Activity size={16} className="text-blue-500" />
+              </div>
+              <div>
+                <p className="text-xs text-slate-400">Capteurs</p>
+                <p className="text-sm font-bold text-slate-700">{zoneStats?.sensor_count || 0}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+                <AlertTriangle size={16} className="text-amber-500" />
+              </div>
+              <div>
+                <p className="text-xs text-slate-400">Alertes actives</p>
+                <p className={`text-sm font-bold ${zoneStats?.active_alerts > 0 ? 'text-amber-500' : 'text-green-500'}`}>
+                  {zoneStats?.active_alerts || 0}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
         <button
-          className="bg-blue-600 text-white px-5 py-2 rounded-xl hover:bg-blue-700 transition shadow-lg font-semibold"
+          className="bg-blue-600 text-white px-5 py-2 rounded-xl hover:bg-blue-700 transition shadow-lg font-semibold flex items-center gap-2"
           onClick={() => setShowForm(true)}
         >
-          + Ajouter un capteur
+          <Plus size={16} />
+          Ajouter un capteur
         </button>
       </div>
 
@@ -224,14 +149,16 @@ const Zone = () => {
           </div>
 
           <div className="mt-6 flex gap-3">
-            <button type="submit" className="bg-emerald-500 text-white px-6 py-2 rounded-lg font-bold hover:bg-emerald-600 transition shadow-md">
+            <button type="submit" className="bg-emerald-500 text-white px-6 py-2 rounded-lg font-bold hover:bg-emerald-600 transition shadow-md flex items-center gap-2">
+              <Check size={16} />
               Créer le capteur
             </button>
             <button
               type="button"
-              className="bg-slate-200 text-slate-600 px-6 py-2 rounded-lg font-bold hover:bg-slate-300 transition"
+              className="bg-slate-200 text-slate-600 px-6 py-2 rounded-lg font-bold hover:bg-slate-300 transition flex items-center gap-2"
               onClick={() => setShowForm(false)}
             >
+              <X size={16} />
               Annuler
             </button>
           </div>
@@ -244,8 +171,11 @@ const Zone = () => {
             <Sensor 
               key={sensor.id} 
               sensor={sensor} 
-              onToggle={(updated) => {
+              onToggle={async (updated) => {
                 setSensores(prev => prev.map(s => s.id === updated.id ? updated : s));
+                // Refresh zone stats after toggling sensor
+                const statsRes = await axios.get(`${origins}/api/zones/${data.id}/stats`);
+                setZoneStats(statsRes.data);
               }} 
             />
           ))}
