@@ -266,23 +266,24 @@ const Analytics = () => {
   };
 
   // Send report
-  const handleSendReport = async () => {
+ const handleSendReport = async () => {
     setSendingReport(true);
     try {
-      let payload = {};
+      let payload = {
+        category: selectedCategory,        // add this
+        zone_id: selectedZone || undefined // add this
+      };
       if (reportPeriod === 'custom') {
-        payload = {
-          start: new Date(reportCustomStart).toISOString(),
-          end: new Date(reportCustomEnd).toISOString(),
-        };
+        payload.start = new Date(reportCustomStart).toISOString();
+        payload.end = new Date(reportCustomEnd).toISOString();
       } else {
-        payload = { period: reportPeriod };
+        payload.period = reportPeriod;
       }
       if (reportEmail.trim()) {
         payload.recipients = [reportEmail];
       }
       const res = await axios.post(`${origins}/api/reports/send`, payload);
-      alert(`Rapport envoyé avec succès à ${res.data.message.split('to ')[1]}`);
+      alert(`Rapport envoye avec succes a ${res.data.message.split('to ')[1]}`);
       setShowReportModal(false);
     } catch (err) {
       console.error(err);
@@ -290,7 +291,7 @@ const Analytics = () => {
     } finally {
       setSendingReport(false);
     }
-  };
+};
 
   const activeCategory = CATEGORIES.find(c => c.id === selectedCategory);
   const Icon = activeCategory?.icon;

@@ -1,10 +1,11 @@
 // src/pages/Dashboard.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import IndustrialChart from '../components/IndustrialChart';
 import Button from '../components/Button';
 import { Thermometer, Gauge, Droplets, Wind, Clock, Calendar, ArrowRight, X, Send, FileText } from 'lucide-react';
 import { origins } from './Managment';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const scrollStyles = `
   .chart-scroll::-webkit-scrollbar { display: none; }
@@ -44,10 +45,9 @@ function toLocalISO(localStr) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00${sign}${hh}:${mm}`;
 }
 
-// ── Category tab (compact) ────────────────────────────────────────────────────
+// ── Category tab (compact style) ──────────────────────────────────────────
 const CategoryTab = ({ category, isActive, onSelect, compact = false }) => {
   const Icon = category.icon;
-  
   if (compact) {
     return (
       <button
@@ -63,7 +63,6 @@ const CategoryTab = ({ category, isActive, onSelect, compact = false }) => {
       </button>
     );
   }
-  
   return (
     <button
       onClick={() => onSelect(category.id)}
@@ -79,7 +78,7 @@ const CategoryTab = ({ category, isActive, onSelect, compact = false }) => {
   );
 };
 
-// ── Sensor card (unchanged) ─────────────────────────────────────────────────
+// ── Sensor card with downsampled chart and fixed pixel spacing ────────────
 const SensorCard = ({ sensorKey, sensorData, categoryColor, categoryUnit, critValue }) => {
   const [loadingReport, setLoadingReport] = useState(false);
   const [sendingEmail, setSendingEmail]   = useState(false);
@@ -93,10 +92,24 @@ const SensorCard = ({ sensorKey, sensorData, categoryColor, categoryUnit, critVa
   const latestValue = sensorData[sensorData.length - 1]?.v?.toFixed(2) ?? '—';
   const isOverThreshold = parseFloat(latestValue) >= critValue;
 
-  const chartData = sensorData.map(p => ({
+  // Prepare chart data
+  let chartData = sensorData.map(p => ({
     x: p.t instanceof Date ? p.t : new Date(p.t),
     y: typeof p.v === 'number' ? p.v : parseFloat(p.v),
   }));
+
+  // Downsample to max 500 points for performance (keeps chart responsive)
+  const MAX_POINTS = 500;
+  let displayData = chartData;
+  if (chartData.length > MAX_POINTS) {
+    const step = chartData.length / MAX_POINTS;
+    displayData = chartData.filter((_, i) => Math.floor(i % step) === 0);
+  }
+
+  // Fixed spacing: 20px per point (approx 0.5 cm at 96 DPI)
+  const PIXELS_PER_POINT = 20;
+  let chartWidth = displayData.length * PIXELS_PER_POINT;
+  chartWidth = Math.max(chartWidth, 500); // minimum width
 
   const generatePdf = async () => {
     const resp = await fetch(`${origins}/generate-report`, {
@@ -165,120 +178,99 @@ const SensorCard = ({ sensorKey, sensorData, categoryColor, categoryUnit, critVa
   };
 
   return (
-    <div className={`bg-white rounded-2xl shadow-sm border-2 transition-colors mb-6 overflow-hidden
-      ${isOverThreshold ? 'border-red-200' : 'border-slate-100'}`}>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className={`bg-white rounded-2xl shadow-sm border-2 transition-colors overflow-hidden
+        ${isOverThreshold ? 'border-red-200' : 'border-slate-100'}`}
+    >
       <style>{scrollStyles}</style>
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 pb-4 border-b border-slate-100">
-        <div className="flex items-center gap-5">
+      {/* Card header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 pb-2 border-b border-slate-100">
+        <div className="flex items-center gap-3">
           <div className="flex flex-col">
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Capteur</span>
-            <span className="text-xl font-bold text-[#17203f]">{sensorKey}</span>
+            <span className="text-lg font-bold text-[#17203f]">{sensorKey}</span>
           </div>
-          <div className="w-px h-10 bg-slate-200" />
+          <div className="w-px h-8 bg-slate-200" />
           <div className="flex flex-col">
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Valeur actuelle</span>
-            <div className="flex items-baseline gap-1.5">
-              <span className={`text-3xl font-bold tabular-nums ${isOverThreshold ? 'text-red-600' : 'text-slate-900'}`}>
+            <div className="flex items-baseline gap-1">
+              <span className={`text-2xl font-bold tabular-nums ${isOverThreshold ? 'text-red-600' : 'text-slate-900'}`}>
                 {latestValue}
               </span>
               <span className="text-sm font-semibold text-slate-400">{categoryUnit}</span>
             </div>
-          </div>
-          <div className="w-px h-10 bg-slate-200 hidden md:block" />
-          <div className="hidden md:flex flex-col">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Seuil critique</span>
-            <span className="text-sm font-semibold text-slate-600">{critValue} {categoryUnit}</span>
           </div>
         </div>
 
         <Button
           onClick={handleGenerateReport}
           loading={loadingReport}
-          icon={<FileText size={15} />}
+          icon={<FileText size={14} />}
           size="sm"
         >
-          {loadingReport ? 'Analyse en cours...' : 'Rapport IA'}
+          {loadingReport ? 'Analyse...' : 'Rapport IA'}
         </Button>
       </div>
 
-      <div className="p-4 sm:p-6">
+      {/* Chart with fixed pixel spacing */}
+      <div className="p-3">
         <div
           id={`chart-${sensorKey}`}
-          className="w-full chart-scroll overflow-x-auto overflow-y-hidden rounded-xl border border-slate-100 bg-slate-50/50"
-          style={{ height: '300px' }}
+          className="w-full chart-scroll overflow-x-auto overflow-y-hidden rounded-lg border border-slate-100 bg-slate-50/50"
+          style={{ height: '260px' }}
         >
-          <div style={{ width: `${Math.max(sensorData.length * 8, 700)}px`, height: '100%' }}>
-            <IndustrialChart data={chartData} color={categoryColor} unit={categoryUnit} critValue={critValue} />
+          <div style={{ width: `${chartWidth}px`, height: '100%' }}>
+            <IndustrialChart data={displayData} color={categoryColor} unit={categoryUnit} critValue={critValue} />
           </div>
         </div>
       </div>
 
+      {/* Email modal (unchanged) */}
       {emailModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 relative">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative">
             <button
               onClick={() => { setEmailModal(false); setEmailTo(''); }}
-              className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 transition-colors"
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700"
             >
               <X size={20} />
             </button>
-
-            <div className="mb-6">
-              <h2 className="text-xl font-bold text-[#17203f] mb-1">Envoyer le rapport</h2>
-              <p className="text-sm text-slate-500">Le rapport PDF et le graphique seront envoyés en pièces jointes.</p>
-            </div>
-
             <div className="mb-4">
-              <div className="flex flex-wrap gap-2 mb-4">
-                <span className="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600">
-                  Rapport_IA_{sensorKey}.pdf
-                </span>
-                {lastChartImg && (
-                  <span className="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600">
-                    Graphique_{sensorKey}.png
-                  </span>
-                )}
+              <h2 className="text-xl font-bold text-[#17203f] mb-1">Envoyer le rapport</h2>
+              <p className="text-sm text-slate-500">PDF + graphique seront joints.</p>
+            </div>
+            <div className="mb-4">
+              <div className="flex flex-wrap gap-2 mb-3">
+                <span className="px-2 py-1 bg-slate-100 rounded text-xs font-semibold">Rapport_IA_{sensorKey}.pdf</span>
+                {lastChartImg && <span className="px-2 py-1 bg-slate-100 rounded text-xs font-semibold">Graphique.png</span>}
               </div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                Email destinataire
-              </label>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Email destinataire</label>
               <input
                 type="email"
                 value={emailTo}
                 onChange={e => setEmailTo(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleSendEmail()}
                 placeholder="responsable@cevital.dz"
-                className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-slate-50 text-sm font-medium outline-none focus:border-[#17203f] transition-colors"
+                className="w-full px-3 py-2 rounded-xl border-2 border-slate-200 bg-slate-50 text-sm outline-none focus:border-[#17203f]"
               />
             </div>
-
-            <div className="flex gap-3 mt-6">
-              <Button
-                variant="ghost"
-                onClick={() => { setEmailModal(false); setEmailTo(''); }}
-                fullWidth
-              >
-                Annuler
-              </Button>
-              <Button
-                onClick={handleSendEmail}
-                loading={sendingEmail}
-                disabled={!emailTo.trim()}
-                icon={<Send size={14} />}
-                fullWidth
-              >
+            <div className="flex gap-3">
+              <Button variant="ghost" onClick={() => { setEmailModal(false); setEmailTo(''); }} fullWidth>Annuler</Button>
+              <Button onClick={handleSendEmail} loading={sendingEmail} disabled={!emailTo.trim()} icon={<Send size={14} />} fullWidth>
                 Envoyer
               </Button>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 };
 
-// ── Compact TimeRangePicker (same as analytics) ──────────────────────────────
+// ── TimeRangePicker (compact + original non‑compact) ─────────────────────
 function TimeRangePicker({ mode, setMode, quickHours, setQuickHours, customStart, setCustomStart, customEnd, setCustomEnd, onApply, error, compact = false }) {
   if (compact) {
     return (
@@ -298,7 +290,6 @@ function TimeRangePicker({ mode, setMode, quickHours, setQuickHours, customStart
             </button>
           ))}
         </div>
-
         <button
           onClick={() => setMode(mode === 'custom' ? 'quick' : 'custom')}
           className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-medium transition-all ${
@@ -310,7 +301,6 @@ function TimeRangePicker({ mode, setMode, quickHours, setQuickHours, customStart
           <Calendar size={12} />
           Perso
         </button>
-
         {mode === 'custom' && (
           <div className="flex items-center gap-1.5 bg-white border border-[#17203f]/20 rounded-lg px-2 py-1">
             <input
@@ -331,9 +321,7 @@ function TimeRangePicker({ mode, setMode, quickHours, setQuickHours, customStart
               className="text-xs font-medium text-slate-700 outline-none bg-transparent cursor-pointer border border-slate-200 rounded px-2 py-0.5"
               style={{ fontSize: '11px' }}
             />
-            <Button onClick={onApply} disabled={!!error} size="xs">
-              OK
-            </Button>
+            <Button onClick={onApply} disabled={!!error} size="xs">OK</Button>
           </div>
         )}
         {error && <p className="text-xs text-red-500 font-medium">{error}</p>}
@@ -341,7 +329,7 @@ function TimeRangePicker({ mode, setMode, quickHours, setQuickHours, customStart
     );
   }
 
-  // Original non‑compact (kept for completeness)
+  // Original non‑compact version
   return (
     <div className="flex flex-wrap items-center gap-3">
       <div className="flex items-center bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm">
@@ -406,7 +394,7 @@ function TimeRangePicker({ mode, setMode, quickHours, setQuickHours, customStart
   );
 }
 
-// ── Main Dashboard ────────────────────────────────────────────────────────────
+// ── Main Dashboard ─────────────────────────────────────────────────────────
 export default function Dashboard() {
   const [activeCategory, setActiveCategory] = useState('TEMP');
   const [sensorsMeta, setSensorsMeta]       = useState([]);
@@ -419,6 +407,8 @@ export default function Dashboard() {
   const [customEnd, setCustomEnd]           = useState(() => nowLocal());
   const [appliedRange, setAppliedRange]     = useState(null);
   const [rangeError, setRangeError]         = useState('');
+  const [loading, setLoading]               = useState(true);
+  const [lastUpdate, setLastUpdate]         = useState(null);
 
   useEffect(() => {
     if (mode !== 'custom') { setRangeError(''); return; }
@@ -437,6 +427,7 @@ export default function Dashboard() {
 
   useEffect(() => { if (mode === 'quick') setAppliedRange(null); }, [mode]);
 
+  // Load sensors and zones
   useEffect(() => {
     const loadMeta = async () => {
       try {
@@ -451,8 +442,11 @@ export default function Dashboard() {
     loadMeta();
   }, []);
 
+  // Load history when filters change
   useEffect(() => {
+    if (sensorsMeta.length === 0) return;
     const loadHistory = async () => {
+      setLoading(true);
       const cat = CATEGORIES.find(c => c.id === activeCategory);
       const filtered = sensorsMeta.filter(s =>
         (s.type_grandeur === cat.type || s.code_unique.startsWith(activeCategory)) &&
@@ -469,8 +463,16 @@ export default function Dashboard() {
         } catch (err) { console.error(err); }
       }));
       setHistoryData(data);
+      setLastUpdate(new Date());
+      setLoading(false);
     };
-    if (sensorsMeta.length) loadHistory();
+    loadHistory();
+    // Polling only in quick mode
+    let interval;
+    if (mode === 'quick') {
+      interval = setInterval(loadHistory, 300000);
+    }
+    return () => clearInterval(interval);
   }, [activeCategory, zoneFilter, quickHours, appliedRange, sensorsMeta, mode]);
 
   const activeCat = CATEGORIES.find(c => c.id === activeCategory);
@@ -480,8 +482,7 @@ export default function Dashboard() {
 
   return (
     <div className="w-full mx-auto px-4 sm:px-6">
-
-      {/* ── STICKY HEADER (exactly as Analytics) ────────────────────────── */}
+      {/* ── STICKY HEADER ─────────────────────────────────────────────── */}
       <div className="sticky top-0 z-20 bg-[#F8F9FB] py-2.5 -mx-4 sm:-mx-6 px-4 sm:px-6 border-b border-slate-200 shadow-sm mb-6">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-lg font-bold text-[#17203f] tracking-tight whitespace-nowrap">Métriques système</h1>
@@ -518,29 +519,40 @@ export default function Dashboard() {
             <span>{new Date(appliedRange.end).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})}</span>
           </div>
         )}
+        {lastUpdate && (
+          <div className="mt-1 text-right text-[10px] text-slate-400">
+            Dernière mise à jour : {lastUpdate.toLocaleTimeString()}
+          </div>
+        )}
       </div>
 
+      {/* Sensor cards in a 2‑column grid */}
       <div className="pb-8">
-        {sensorsWithData.length === 0 ? (
+        {loading && sensorsWithData.length === 0 ? (
+          <div className="flex justify-center py-20">
+            <div className="w-8 h-8 border-2 border-[#17203f] border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : sensorsWithData.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-28 text-slate-300">
             <Clock size={52} strokeWidth={1} className="mb-4" />
-            <p className="font-semibold text-slate-400 text-lg">Aucune donnée disponible</p>
-            <p className="text-slate-300 text-sm mt-1 text-center max-w-md">
-              Aucune mesure enregistrée pour la période sélectionnée.<br />
-              Essayez d'élargir la plage temporelle ou modifiez les filtres.
-            </p>
+            <p className="font-semibold text-slate-400 text-lg">Aucune donnée pour cette plage</p>
+            <p className="text-slate-300 text-sm mt-1">Modifiez les filtres ou la plage temporelle</p>
           </div>
         ) : (
-          sensorsWithData.map(([key, data]) => (
-            <SensorCard
-              key={key}
-              sensorKey={key}
-              sensorData={data}
-              categoryColor={activeCat.color}
-              categoryUnit={activeCat.unit}
-              critValue={activeCat.crit}
-            />
-          ))
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <AnimatePresence>
+              {sensorsWithData.map(([key, data]) => (
+                <SensorCard
+                  key={key}
+                  sensorKey={key}
+                  sensorData={data}
+                  categoryColor={activeCat.color}
+                  categoryUnit={activeCat.unit}
+                  critValue={activeCat.crit}
+                />
+              ))}
+            </AnimatePresence>
+          </div>
         )}
       </div>
     </div>
