@@ -3,6 +3,13 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { origins } from '../pages/Managment';
 
+const CATEGORIES = [
+  { id: 'TEMP', label: 'Température',  type: 'Température' },
+  { id: 'PRES', label: 'Pression',     type: 'Pression'    },
+  { id: 'HUMI', label: 'Humidité',     type: 'Humidité'    },
+  { id: 'CO2',  label: 'Qualité Air',  type: 'Qualité Air' },
+];
+
 export function useLiveDashboard(activeCategory, zoneFilter, mode, quickHours, appliedRange) {
   const [sensorsMeta, setSensorsMeta] = useState([]);
   const [zones, setZones] = useState([]);
@@ -58,7 +65,8 @@ export function useLiveDashboard(activeCategory, zoneFilter, mode, quickHours, a
             url = `${origins}/api/history/${s.id}?hours=${quickHours}`;
           }
           const res = await axios.get(url, { signal: controller.signal });
-          data[s.code_unique] = res.data.map(p => ({ t: new Date(p.time), v: p.valeur }));
+          // Append 'Z' so JS parses the naive UTC string as UTC (not local time)
+          data[s.code_unique] = res.data.map(p => ({ t: new Date(p.time + 'Z'), v: p.valeur }));
         } catch (err) {
           if (err.name !== 'CanceledError' && err.name !== 'AbortError') {
             console.error(`Failed to fetch sensor ${s.code_unique}:`, err);
@@ -80,7 +88,7 @@ export function useLiveDashboard(activeCategory, zoneFilter, mode, quickHours, a
   // Initial fetch and polling
   useEffect(() => {
     fetchAllData();
-    // Poll every 5 seconds only in quick mode (real‑time)
+    // Poll every 5 minutes only in quick mode (real-time)
     if (mode === 'quick') {
       intervalRef.current = setInterval(fetchAllData, 300000);
     }

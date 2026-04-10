@@ -16,6 +16,16 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      '/generate-report': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/send-report-email': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
 })

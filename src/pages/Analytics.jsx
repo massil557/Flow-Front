@@ -118,6 +118,16 @@ const Analytics = () => {
   const [reportEmail, setReportEmail] = useState('');
   const [sendingReport, setSendingReport] = useState(false);
 
+  // Draggable sending bubble — position via DOM ref (zero React re-renders during drag)
+  const [sendingBubble, setSendingBubble] = useState(false);
+  const [bubbleStatus, setBubbleStatus]   = useState('sending'); // 'sending' | 'done' | 'error'
+  const bubbleRef        = useRef(null);
+  const bubbleDragging   = useRef(false);
+  const bubbleDidDrag    = useRef(false);
+  const bubbleDragOffset = useRef({ x: 0, y: 0 });
+  const bubblePosRef     = useRef({ x: window.innerWidth - 80, y: window.innerHeight - 120 });
+  const reportAbortCtrl  = useRef(null);
+
   const timeSeriesController = useRef(null);
   const zoneCompController = useRef(null);
   const [fetchTrigger, setFetchTrigger] = useState(0);
@@ -266,32 +276,52 @@ const Analytics = () => {
   };
 
   // Send report
- const handleSendReport = async () => {
-    setSendingReport(true);
-    try {
-      let payload = {
-        category: selectedCategory,        // add this
-        zone_id: selectedZone || undefined // add this
-      };
-      if (reportPeriod === 'custom') {
-        payload.start = new Date(reportCustomStart).toISOString();
-        payload.end = new Date(reportCustomEnd).toISOString();
-      } else {
-        payload.period = reportPeriod;
-      }
-      if (reportEmail.trim()) {
-        payload.recipients = [reportEmail];
-      }
-      const res = await axios.post(`${origins}/api/reports/send`, payload);
-      alert(`Rapport envoye avec succes a ${res.data.message.split('to ')[1]}`);
-      setShowReportModal(false);
-    } catch (err) {
-      console.error(err);
-      alert("Erreur lors de l'envoi du rapport.");
-    } finally {
-      setSendingReport(false);
+  const handleSendReport = () => {
+    let payload = {
+      category: selectedCategory,
+      zone_id: selectedZone || undefined
+    };
+    if (reportPeriod === 'custom') {
+      payload.start = new Date(reportCustomStart).toISOString();
+      payload.end   = new Date(reportCustomEnd).toISOString();
+    } else {
+      payload.period = reportPeriod;
     }
-};
+    if (reportEmail.trim()) {
+      payload.recipients = [reportEmail];
+    }
+
+    // Reset bubble position to bottom-right corner
+    bubblePosRef.current = { x: window.innerWidth - 80, y: window.innerHeight - 120 };
+    if (bubbleRef.current) {
+      bubbleRef.current.style.left = (bubblePosRef.current.x - 28) + 'px';
+      bubbleRef.current.style.top  = (bubblePosRef.current.y - 28) + 'px';
+    }
+
+    // Close modal immediately, show bubble
+    setShowReportModal(false);
+    setBubbleStatus('sending');
+    setSendingBubble(true);
+
+    // Create a new AbortController for this request
+    const ctrl = new AbortController();
+    reportAbortCtrl.current = ctrl;
+
+    axios.post(`${origins}/api/reports/send`, payload, { signal: ctrl.signal })
+      .then(() => { if (!ctrl.signal.aborted) setBubbleStatus('done'); })
+      .catch((err) => { if (!ctrl.signal.aborted && err.name !== 'CanceledError' && err.name !== 'AbortError') setBubbleStatus('error'); });
+  };
+
+  const handleCancelReport = () => {
+    // Abort the in-flight request
+    if (reportAbortCtrl.current) {
+      reportAbortCtrl.current.abort();
+      reportAbortCtrl.current = null;
+    }
+    setSendingBubble(false);
+    setBubbleStatus('sending');
+    setShowReportModal(false);
+  };
 
   const activeCategory = CATEGORIES.find(c => c.id === selectedCategory);
   const Icon = activeCategory?.icon;
@@ -302,6 +332,60 @@ const Analytics = () => {
   const overallTrend = timeseries.length > 1 
     ? (timeseries[timeseries.length-1].avg_value > timeseries[0].avg_value ? 'Hausse' : 'Baisse')
     : '-';
+
+  // Bubble drag — uses global window listeners to avoid attaching to the whole page div
+  const handleBubbleMouseDown = (e) => {
+    bubbleDragging.current = true;
+    bubbleDidDrag.current  = false;
+    bubbleDragOffset.current = {
+      x: e.clientX - bubblePosRef.current.x,
+      y: e.clientY - bubblePosRef.current.y,
+    };
+    e.preventDefault();
+
+    const onMove = (ev) => {
+      if (!bubbleDragging.current) return;
+      bubbleDidDrag.current = true;
+      const nx = Math.min(Math.max(ev.clientX - bubbleDragOffset.current.x, 28), window.innerWidth  - 28);
+      const ny = Math.min(Math.max(ev.clientY - bubbleDragOffset.current.y, 28), window.innerHeight - 28);
+      bubblePosRef.current = { x: nx, y: ny };
+      if (bubbleRef.current) {
+        bubbleRef.current.style.left = (nx - 28) + 'px';
+        bubbleRef.current.style.top  = (ny - 28) + 'px';
+      }
+    };
+    const onUp = () => {
+      bubbleDragging.current = false;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
+
+  const handleBubbleTouchStart = (e) => {
+    const t = e.touches[0];
+    bubbleDragging.current = true;
+    bubbleDidDrag.current  = false;
+    bubbleDragOffset.current = {
+      x: t.clientX - bubblePosRef.current.x,
+      y: t.clientY - bubblePosRef.current.y,
+    };
+  };
+  const handleBubbleTouchMove = (e) => {
+    if (!bubbleDragging.current) return;
+    bubbleDidDrag.current = true;
+    const t = e.touches[0];
+    const nx = Math.min(Math.max(t.clientX - bubbleDragOffset.current.x, 28), window.innerWidth  - 28);
+    const ny = Math.min(Math.max(t.clientY - bubbleDragOffset.current.y, 28), window.innerHeight - 28);
+    bubblePosRef.current = { x: nx, y: ny };
+    if (bubbleRef.current) {
+      bubbleRef.current.style.left = (nx - 28) + 'px';
+      bubbleRef.current.style.top  = (ny - 28) + 'px';
+    }
+    e.preventDefault();
+  };
+  const handleBubbleTouchEnd = () => { bubbleDragging.current = false; };
 
   return (
     <div className="w-full mx-auto px-4 sm:px-6 py-6">
@@ -587,20 +671,77 @@ const Analytics = () => {
             <div className="flex gap-3 mt-6">
               <Button
                 variant="ghost"
-                onClick={() => setShowReportModal(false)}
+                onClick={sendingBubble ? handleCancelReport : () => setShowReportModal(false)}
                 fullWidth
               >
                 Annuler
               </Button>
               <Button
                 onClick={handleSendReport}
-                loading={sendingReport}
+                disabled={sendingBubble}
                 icon={<Send size={14} />}
                 fullWidth
               >
                 Envoyer
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Draggable sending bubble */}
+      {sendingBubble && (
+        <div
+          ref={bubbleRef}
+          style={{
+            position: 'fixed',
+            left: bubblePosRef.current.x - 28,
+            top:  bubblePosRef.current.y - 28,
+            zIndex: 9999,
+            cursor: 'grab',
+            userSelect: 'none',
+            touchAction: 'none',
+          }}
+          onMouseDown={handleBubbleMouseDown}
+          onTouchStart={handleBubbleTouchStart}
+          onTouchMove={handleBubbleTouchMove}
+          onTouchEnd={handleBubbleTouchEnd}
+          onClick={() => {
+            // Ignore if the user just dragged
+            if (bubbleDidDrag.current) { bubbleDidDrag.current = false; return; }
+            if (bubbleStatus === 'done' || bubbleStatus === 'error') {
+              setSendingBubble(false);
+              setBubbleStatus('sending');
+            } else {
+              // Re-open the report modal
+              setShowReportModal(true);
+            }
+          }}
+          title={
+            bubbleStatus === 'sending' ? 'Envoi en cours… Cliquer pour rouvrir' :
+            bubbleStatus === 'done'    ? 'Rapport envoyé ! Cliquer pour fermer' :
+                                         "Échec de l'envoi. Cliquer pour fermer"
+          }
+        >
+          <div
+            className={`w-14 h-14 rounded-full shadow-xl flex items-center justify-center ${
+              bubbleStatus === 'sending' ? 'bg-[#17203f]' :
+              bubbleStatus === 'done'    ? 'bg-emerald-500' :
+                                           'bg-red-500'
+            }`}
+          >
+            {bubbleStatus === 'sending' && (
+              <RefreshCw size={22} className="text-white animate-spin" />
+            )}
+            {bubbleStatus === 'done' && (
+              <Send size={22} className="text-white" />
+            )}
+            {bubbleStatus === 'error' && (
+              <X size={22} className="text-white" />
+            )}
+          </div>
+          <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] font-semibold text-slate-500">
+            {bubbleStatus === 'sending' ? 'Envoi…' : bubbleStatus === 'done' ? 'Envoyé ✓' : 'Erreur ✗'}
           </div>
         </div>
       )}
