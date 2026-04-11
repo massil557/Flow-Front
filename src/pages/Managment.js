@@ -9,6 +9,7 @@ import flow        from "../imgs/icons/flow.png";
 import man         from "../imgs/icons/man.svg";
 import PlantMap    from "./PlantMap";
 import Zone        from "./Zone";
+import Prediction from './Prediction';
 
 const origins = ''; // Proxy handles routing to backend
 
@@ -24,4 +25,5 @@ export {
   origins,
   PlantMap,
   Zone,
+  Prediction 
 };

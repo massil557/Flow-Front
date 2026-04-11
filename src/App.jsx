@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import MainLayout from "./layouts/MainLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
-import { Dashboard, Analytics, Alerts, LoginPage, PlantMap, Zone, AdminUsers } from "./pages/Managment";
+import { Dashboard, Analytics, Alerts, LoginPage, PlantMap, Zone, AdminUsers, Prediction } from "./pages/Managment";
 import UserProfile from "./pages/UserProfile";
 
 // ── Admin-only guard ──────────────────────────────────────────────────────────
@@ -44,6 +44,8 @@ export default function App() {
           <Route path="plantmap"   element={<PlantMap />} />
           <Route path="zone"       element={<Zone />} />
           <Route path="profile"    element={<UserProfile />} />
+          <Route path="prediction" element={<Prediction />} />
+
 
           {/* Admin only */}
           <Route
