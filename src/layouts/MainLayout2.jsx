@@ -1,12 +1,12 @@
 // src/layouts/MainLayout.jsx
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { LayoutGrid, Activity, Bell, Search, User, ShieldCheck, LogOut, Map, ServerCog } from "lucide-react";
+import { LayoutGrid, Activity, Bell, Search, User, ShieldCheck, LogOut, Map } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cevitalLogo } from "../pages/Managment";
 import Logo from "../components/logo";
 import { useAuth } from "../context/AuthContext";
 import { useAlerts } from '../hooks/useAlerts';
-import { requestNotificationPermission } from '../utils/notifications';
+import { requestNotificationPermission, showBrowserNotification } from '../utils/notifications';
 import NotificationToast from '../components/NotificationToast';
 
 const SidebarItem = ({ to, label, active, icon: Icon }) => (
@@ -43,14 +43,21 @@ export default function MainLayout() {
 
   const { activeCount, newAlert } = useAlerts();
 
-  useEffect(() => { requestNotificationPermission(); }, []);
-
+  // Request permission on mount (optional - for browser notifications)
   useEffect(() => {
-    if (newAlert) setActiveNotifications(prev => [...prev, newAlert]);
+    requestNotificationPermission();
+  }, []);
+
+  // Handle new alerts
+  useEffect(() => {
+    if (newAlert) {
+      setActiveNotifications(prev => [...prev, newAlert]);
+    }
   }, [newAlert]);
 
-  const removeNotification = (alertId) =>
+  const removeNotification = (alertId) => {
     setActiveNotifications(prev => prev.filter(n => n.id !== alertId));
+  };
 
   const isAdmin        = user?.role === 'admin';
   const isAutomatician = user?.role === 'automatician' || isAdmin;
@@ -59,10 +66,10 @@ export default function MainLayout() {
   const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/');
 
   const navItems = isAutomatician ? [
-    { icon: LayoutGrid, label: 'Dashboard',   to: '/mainlayout/dashboard' },
+    { icon: LayoutGrid, label: 'Dashboard', to: '/mainlayout/dashboard' },
     { icon: Activity,   label: 'Analytiques', to: '/mainlayout/analytics' },
-    { icon: Bell,       label: 'Alertes',     to: '/mainlayout/alerts'    },
-    { icon: Map,        label: 'Carte usine', to: '/mainlayout/plantmap'  },
+    { icon: Bell,       label: 'Alertes',    to: '/mainlayout/alerts'    },
+    { icon: Map,        label: 'Carte usine', to: '/mainlayout/plantmap' },
   ] : [];
 
   return (
@@ -71,8 +78,12 @@ export default function MainLayout() {
       {/* ── SIDEBAR ─────────────────────────────────────────────────────────── */}
       <aside className="hidden lg:flex w-52 bg-[#17203f] flex-col fixed left-0 top-0 h-screen z-20 shadow-xl">
 
-        <div className="px-5 pt-8 pb-4"><Logo /></div>
+        {/* Logo */}
+        <div className="px-5 pt-8 pb-4">
+          <Logo />
+        </div>
 
+        {/* User badge */}
         <div className="mx-3 mb-4">
           <Link
             to="/mainlayout/profile"
@@ -90,15 +101,21 @@ export default function MainLayout() {
 
         <div className="mx-5 mb-3 h-px bg-white/10" />
 
+        {/* Nav */}
         <nav className="flex flex-col gap-0.5 px-3 flex-1 overflow-y-auto">
           {navItems.map(item => (
             item.label === 'Alertes' ? (
               <div key={item.to} className="relative">
-                <SidebarItem icon={item.icon} label={item.label} to={item.to} active={isActive(item.to)} />
+                <SidebarItem
+                  icon={item.icon}
+                  label={item.label}
+                  to={item.to}
+                  active={isActive(item.to)}
+                />
                 {activeCount > 0 && (
                   <div className="absolute top-2 right-2">
                     <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm rounded-lg px-2 py-0.5 border border-white/20">
-                      <div className="w-1.5 h-1.5 bg-amber-400 rounded-full shadow-sm" />
+                      <div className="w-1.5 h-1.5 bg-amber-400 rounded-full shadow-sm"></div>
                       <span className="text-[11px] font-medium text-white/90">
                         {activeCount > 99 ? '99+' : activeCount}
                       </span>
@@ -107,33 +124,27 @@ export default function MainLayout() {
                 )}
               </div>
             ) : (
-              <SidebarItem key={item.to} icon={item.icon} label={item.label} to={item.to} active={isActive(item.to)} />
+              <SidebarItem
+                key={item.to}
+                icon={item.icon}
+                label={item.label}
+                to={item.to}
+                active={isActive(item.to)}
+              />
             )
           ))}
 
-          {/* ── Section Administration (admin uniquement) ── */}
           {isAdmin && (
             <>
               <div className="px-4 pt-5 pb-1">
                 <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold">Administration</p>
               </div>
-              <SidebarItem
-                icon={ShieldCheck}
-                label="Utilisateurs"
-                to="/mainlayout/admin"
-                active={isActive("/mainlayout/admin")}
-              />
-              {/* ── NOUVEAU : État du serveur ── */}
-              <SidebarItem
-                icon={ServerCog}
-                label="État serveur"
-                to="/mainlayout/server-status"
-                active={isActive("/mainlayout/server-status")}
-              />
+              <SidebarItem icon={ShieldCheck} label="Utilisateurs" to="/mainlayout/admin" active={isActive("/mainlayout/admin")} />
             </>
           )}
         </nav>
 
+        {/* Logout */}
         <div className="p-3 border-t border-white/10">
           <button
             onClick={handleLogout}
@@ -148,6 +159,7 @@ export default function MainLayout() {
       {/* ── MAIN CONTENT ────────────────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col lg:ml-52 h-screen overflow-hidden">
 
+        {/* Desktop header */}
         <header className="hidden lg:flex items-center justify-between h-16 bg-white border-b border-slate-100 px-6 sticky top-0 z-10 shadow-sm">
           <img src={cevitalLogo} alt="Cevital" className="h-8 object-contain" />
           <div className="flex items-center gap-4">
@@ -169,25 +181,39 @@ export default function MainLayout() {
           </div>
         </header>
 
+        {/* Mobile header */}
         <header className="lg:hidden flex items-center justify-between px-4 py-4 bg-white border-b border-slate-100 sticky top-0 z-10 shadow-sm">
           <img src={cevitalLogo} alt="Cevital" className="h-7 object-contain" />
           <div className="flex items-center gap-2">
-            <button onClick={() => setSearchOpen(!searchOpen)} className="p-2.5 hover:bg-slate-50 rounded-xl transition-colors">
+            <button
+              onClick={() => setSearchOpen(!searchOpen)}
+              className="p-2.5 hover:bg-slate-50 rounded-xl transition-colors"
+            >
               <Search size={18} className="text-slate-600" />
             </button>
-            <Link to="/mainlayout/profile" className="w-8 h-8 rounded-xl bg-[#17203f] flex items-center justify-center text-white text-xs font-bold">
+            <Link
+              to="/mainlayout/profile"
+              className="w-8 h-8 rounded-xl bg-[#17203f] flex items-center justify-center text-white text-xs font-bold"
+            >
               {user?.username?.[0]?.toUpperCase()}
             </Link>
           </div>
         </header>
 
+        {/* Mobile search bar */}
         {searchOpen && (
           <div className="lg:hidden flex items-center gap-3 px-4 py-3 bg-white border-b border-slate-100">
             <Search className="text-slate-400 shrink-0" size={15} />
-            <input type="text" placeholder="Rechercher..." autoFocus className="flex-1 bg-transparent text-sm outline-none font-medium" />
+            <input
+              type="text"
+              placeholder="Rechercher..."
+              autoFocus
+              className="flex-1 bg-transparent text-sm outline-none font-medium"
+            />
           </div>
         )}
 
+        {/* Page content */}
         <main className="flex-1 overflow-y-auto pb-20 lg:pb-0">
           <Outlet />
         </main>
@@ -216,21 +242,39 @@ export default function MainLayout() {
                 <span className="text-[10px] font-semibold">Alertes</span>
               </Link>
             ) : (
-              <MobileNavItem key={item.to} icon={item.icon} label={item.label} to={item.to} active={isActive(item.to)} />
+              <MobileNavItem
+                key={item.to}
+                icon={item.icon}
+                label={item.label}
+                to={item.to}
+                active={isActive(item.to)}
+              />
             )
           ))}
           {isAdmin && (
-            <>
-              <MobileNavItem icon={ShieldCheck} label="Admin"   to="/mainlayout/admin"         active={isActive("/mainlayout/admin")} />
-              <MobileNavItem icon={ServerCog}   label="Serveur" to="/mainlayout/server-status" active={isActive("/mainlayout/server-status")} />
-            </>
+            <MobileNavItem
+              icon={ShieldCheck}
+              label="Admin"
+              to="/mainlayout/admin"
+              active={isActive("/mainlayout/admin")}
+            />
           )}
-          <MobileNavItem icon={User} label="Profil" to="/mainlayout/profile" active={isActive("/mainlayout/profile")} />
+          <MobileNavItem
+            icon={User}
+            label="Profil"
+            to="/mainlayout/profile"
+            active={isActive("/mainlayout/profile")}
+          />
         </div>
       </nav>
 
+      {/* Notification toasts */}
       {activeNotifications.map(alert => (
-        <NotificationToast key={alert.id} alert={alert} onClose={() => removeNotification(alert.id)} />
+        <NotificationToast
+          key={alert.id}
+          alert={alert}
+          onClose={() => removeNotification(alert.id)}
+        />
       ))}
     </div>
   );

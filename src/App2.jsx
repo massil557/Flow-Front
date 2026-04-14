@@ -3,10 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import MainLayout from "./layouts/MainLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
-import {
-  Dashboard, Analytics, Alerts, LoginPage,
-  PlantMap, Zone, AdminUsers, Prediction, ServerStatus
-} from "./pages/Managment";
+import { Dashboard, Analytics, Alerts, LoginPage, PlantMap, Zone, AdminUsers, Prediction } from "./pages/Managment";
 import UserProfile from "./pages/UserProfile";
 
 // ── Admin-only guard ──────────────────────────────────────────────────────────
@@ -18,7 +15,7 @@ function AdminRoute({ children }) {
   return children;
 }
 
-// ── Default index ─────────────────────────────────────────────────────────────
+// ── Default index: admin → admin panel, others → dashboard ───────────────────
 function DefaultRedirect() {
   const { user, loading } = useAuth();
   if (loading) return null;
@@ -40,18 +37,25 @@ export default function App() {
             </ProtectedRoute>
           }
         >
-          <Route index          element={<DefaultRedirect />} />
-          <Route path="dashboard"     element={<Dashboard />} />
-          <Route path="analytics"     element={<Analytics />} />
-          <Route path="alerts"        element={<Alerts />} />
-          <Route path="plantmap"      element={<PlantMap />} />
-          <Route path="zone"          element={<Zone />} />
-          <Route path="profile"       element={<UserProfile />} />
-          <Route path="prediction"    element={<Prediction />} />
+          <Route index element={<DefaultRedirect />} />
+          <Route path="dashboard"  element={<Dashboard />} />
+          <Route path="analytics"  element={<Analytics />} />
+          <Route path="alerts"     element={<Alerts />} />
+          <Route path="plantmap"   element={<PlantMap />} />
+          <Route path="zone"       element={<Zone />} />
+          <Route path="profile"    element={<UserProfile />} />
+          <Route path="prediction" element={<Prediction />} />
+
 
           {/* Admin only */}
-          <Route path="admin" element={<AdminRoute><AdminUsers /></AdminRoute>} />
-          <Route path="server-status" element={<AdminRoute><ServerStatus /></AdminRoute>} />
+          <Route
+            path="admin"
+            element={
+              <AdminRoute>
+                <AdminUsers />
+              </AdminRoute>
+            }
+          />
         </Route>
       </Routes>
     </BrowserRouter>
