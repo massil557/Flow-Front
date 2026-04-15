@@ -148,7 +148,7 @@ export default function AdminUsers() {
   const fetchUsers = async () => {
     try {
       const res = await api.get('/admin/users');
-       console.log('API response:', res.data);   // 👈 check the browser console
+       console.log('API response:', res);   // 👈 check the browser console
 
       setUsers(res.data);
     } catch (e) { console.error(e); }
