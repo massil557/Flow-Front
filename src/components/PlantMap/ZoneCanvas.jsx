@@ -35,7 +35,7 @@ const drawSilo = (ctx, x, y, w, h, color, borderColor) => {
 };
 
 // Helper: draw a warehouse (rectangular with roof and doors)
-const drawWarehouse = (ctx, x, y, w, h, color, borderColor) => {
+const drawWarehouse = (ctx, x, y, w, h, color, borderColor, isDark) => {
   // Main body
   ctx.fillStyle = color;
   ctx.fillRect(x, y, w, h);
@@ -46,17 +46,17 @@ const drawWarehouse = (ctx, x, y, w, h, color, borderColor) => {
   ctx.fillStyle = borderColor;
   ctx.fillRect(x, y, w, 8);
   // Loading doors (large rectangles)
-  ctx.fillStyle = '#2d2d2d';
+  ctx.fillStyle = isDark ? '#1a1a2e' : '#2d2d2d';
   const doorWidth = Math.min(40, w * 0.3);
   const doorX = x + (w / 2) - (doorWidth / 2);
   ctx.fillRect(doorX, y + h - 25, doorWidth, 25);
   // Dock ramp
-  ctx.fillStyle = '#78716c';
+  ctx.fillStyle = isDark ? '#3a3a4a' : '#78716c';
   ctx.fillRect(doorX - 5, y + h - 5, doorWidth + 10, 5);
 };
 
 // Helper: draw refinery/process building (complex shape)
-const drawProcessBuilding = (ctx, x, y, w, h, color, borderColor) => {
+const drawProcessBuilding = (ctx, x, y, w, h, color, borderColor, isDark) => {
   // Main building
   ctx.fillStyle = color;
   ctx.fillRect(x, y, w, h);
@@ -64,7 +64,7 @@ const drawProcessBuilding = (ctx, x, y, w, h, color, borderColor) => {
   ctx.strokeRect(x, y, w, h);
 
   // Chimney (tall pipe)
-  ctx.fillStyle = '#475569';
+  ctx.fillStyle = isDark ? '#3a3a5a' : '#475569';
   ctx.fillRect(x + w - 20, y - 15, 8, 30);
   ctx.fillRect(x + w - 18, y - 8, 4, 20);
 
@@ -73,8 +73,8 @@ const drawProcessBuilding = (ctx, x, y, w, h, color, borderColor) => {
   ctx.fillRect(x + 15, y + 5, 12, 8);
   ctx.fillRect(x + 35, y + 5, 12, 8);
 
-  // Windows
-  ctx.fillStyle = '#fbbf24';
+  // Windows — use amber in both modes, slightly dimmer in dark
+  ctx.fillStyle = isDark ? '#d4a000' : '#fbbf24';
   const winW = 10, winH = 10;
   ctx.fillRect(x + w * 0.2, y + h * 0.4, winW, winH);
   ctx.fillRect(x + w * 0.5, y + h * 0.4, winW, winH);
@@ -82,7 +82,7 @@ const drawProcessBuilding = (ctx, x, y, w, h, color, borderColor) => {
 };
 
 // Helper: draw energy building (cooling towers)
-const drawEnergyBuilding = (ctx, x, y, w, h, color, borderColor) => {
+const drawEnergyBuilding = (ctx, x, y, w, h, color, borderColor, isDark) => {
   // Main building
   ctx.fillStyle = color;
   ctx.fillRect(x, y, w, h);
@@ -96,10 +96,10 @@ const drawEnergyBuilding = (ctx, x, y, w, h, color, borderColor) => {
   const towerX2 = x + w * 0.75 - towerW/2;
   const towerY = y + 5;
 
-  ctx.fillStyle = '#9ca3af';
+  ctx.fillStyle = isDark ? '#4a4a6a' : '#9ca3af';
   ctx.fillRect(towerX1, towerY, towerW, towerH);
   ctx.fillRect(towerX2, towerY, towerW, towerH);
-  ctx.fillStyle = '#6b7280';
+  ctx.fillStyle = isDark ? '#3a3a5a' : '#6b7280';
   ctx.beginPath();
   ctx.ellipse(towerX1 + towerW/2, towerY, towerW/2, 6, 0, 0, Math.PI * 2);
   ctx.fill();
@@ -108,40 +108,40 @@ const drawEnergyBuilding = (ctx, x, y, w, h, color, borderColor) => {
   ctx.fill();
 
   // Steam vents
-  ctx.fillStyle = '#facc15';
+  ctx.fillStyle = isDark ? '#a08000' : '#facc15';
   ctx.fillRect(towerX1 + towerW/2 - 2, towerY - 4, 4, 8);
   ctx.fillRect(towerX2 + towerW/2 - 2, towerY - 4, 4, 8);
 };
 
 // Main drawing function – selects the right shape based on zone type
-const drawZoneBuilding = (ctx, zone, hasAlerts, isSelected, isHovered, alertCount) => {
+const drawZoneBuilding = (ctx, zone, hasAlerts, isSelected, isHovered, alertCount, isDark) => {
   const type = zone.type;
   const colors = ZONE_COLORS[type] || ZONE_COLORS.default;
-  let fillColor = colors.bg;
-  let borderColor = colors.border;
+  let fillColor = isDark ? '#2a3a4a' : colors.bg;
+  let borderColor = isDark ? '#4a5a6a' : colors.border;
 
   if (hasAlerts) {
     borderColor = '#f59e0b';
-    fillColor = '#fffbeb';
+    fillColor = isDark ? '#2a2a1a' : '#fffbeb';
   }
   if (isSelected) {
-    borderColor = '#3b82f6';
-    fillColor = '#eff6ff';
+    borderColor = '#60a5fa';
+    fillColor = isDark ? '#1a2a4a' : '#eff6ff';
   }
   if (isHovered && !isSelected) {
-    borderColor = '#94a3b8';
-    fillColor = '#f8fafc';
+    borderColor = isDark ? '#7a9aba' : '#94a3b8';
+    fillColor = isDark ? '#3a4a5a' : '#f8fafc';
   }
 
   // Draw specific building shape
   if (type === 'Stockage') {
     drawSilo(ctx, zone.x, zone.y, zone.w, zone.h, fillColor, borderColor);
   } else if (type === 'Process') {
-    drawProcessBuilding(ctx, zone.x, zone.y, zone.w, zone.h, fillColor, borderColor);
+    drawProcessBuilding(ctx, zone.x, zone.y, zone.w, zone.h, fillColor, borderColor, isDark);
   } else if (type === 'Logistique') {
-    drawWarehouse(ctx, zone.x, zone.y, zone.w, zone.h, fillColor, borderColor);
+    drawWarehouse(ctx, zone.x, zone.y, zone.w, zone.h, fillColor, borderColor, isDark);
   } else if (type === 'Énergie') {
-    drawEnergyBuilding(ctx, zone.x, zone.y, zone.w, zone.h, fillColor, borderColor);
+    drawEnergyBuilding(ctx, zone.x, zone.y, zone.w, zone.h, fillColor, borderColor, isDark);
   } else {
     // fallback rectangle
     ctx.fillStyle = fillColor;
@@ -163,9 +163,9 @@ const drawZoneBuilding = (ctx, zone, hasAlerts, isSelected, isHovered, alertCoun
 };
 
 // Draw minimal grid
-const drawMinimalGrid = (ctx, width, height, zoom, offset) => {
+const drawMinimalGrid = (ctx, width, height, zoom, offset, isDark) => {
   const gridSize = 50;
-  ctx.strokeStyle = '#e2e8f0';
+  ctx.strokeStyle = isDark ? '#1e293b' : '#e2e8f0';
   ctx.lineWidth = 0.5 / zoom;
 
   for (let x = offset.x % gridSize; x < width / zoom; x += gridSize) {
@@ -217,13 +217,15 @@ const ZoneCanvas = forwardRef(({
     ctx.translate(viewOffset.x, viewOffset.y);
     ctx.scale(zoom, zoom);
 
-    // Light background
-    ctx.fillStyle = '#f8fafc';
+    // Light / dark background
+    const isDark = document.documentElement.classList.contains('dark');
+    ctx.fillStyle = isDark ? '#0f172a' : '#f8fafc';
     ctx.fillRect(0, 0, canvas.width / zoom, canvas.height / zoom);
 
-    drawMinimalGrid(ctx, canvas.width, canvas.height, zoom, viewOffset);
+    drawMinimalGrid(ctx, canvas.width, canvas.height, zoom, viewOffset, isDark);
 
     // Draw zones (using fixed positions)
+    const isDark = document.documentElement.classList.contains('dark');
     zones.forEach(zone => {
       const stats = zoneStats[zone.id];
       const isSelected = selectedZone?.id === zone.id;
@@ -231,18 +233,18 @@ const ZoneCanvas = forwardRef(({
       const hasAlerts = stats?.active_alerts > 0;
       const alertCount = stats?.active_alerts || 0;
 
-      drawZoneBuilding(ctx, zone, hasAlerts, isSelected, isHovered, alertCount);
+      drawZoneBuilding(ctx, zone, hasAlerts, isSelected, isHovered, alertCount, isDark);
 
       // Zone name label
       ctx.font = `500 ${13 / zoom}px "Inter", system-ui, sans-serif`;
-      ctx.fillStyle = '#1e293b';
+      ctx.fillStyle = isDark ? '#e2e8f0' : '#1e293b';
       ctx.shadowColor = 'transparent';
       ctx.fillText(zone.nom_zone, zone.x + 12, zone.y + 28);
 
       // Sensor count
       if (stats?.sensor_count > 0) {
         ctx.font = `${11 / zoom}px monospace`;
-        ctx.fillStyle = '#64748b';
+        ctx.fillStyle = isDark ? '#94a3b8' : '#64748b';
         ctx.fillText(`${stats.sensor_count} sensors`, zone.x + 12, zone.y + zone.h - 12);
       }
     });
@@ -268,7 +270,7 @@ const ZoneCanvas = forwardRef(({
   return (
     <canvas
       ref={canvasRef}
-      className="w-full h-full cursor-crosshair bg-slate-50"
+      className="w-full h-full cursor-crosshair bg-slate-50 dark:bg-[#0f172a]"
       onMouseDown={onMouseDown}
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}

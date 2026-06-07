@@ -1,4 +1,5 @@
 // src/pages/PlantMap.jsx
+import { useTranslation } from 'react-i18next';
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -17,6 +18,7 @@ const getZoneIcon = (code) => {
 };
 
 const PlantMap = () => {
+  const { t } = useTranslation();
   const [zones, setZones] = useState([]);
   const [zoneStats, setZoneStats] = useState({});
   const [activeZone, setActiveZone] = useState(null);
@@ -137,22 +139,22 @@ const PlantMap = () => {
   };
 
   return (
-    <div className="w-full bg-slate-50 min-h-screen p-4">
+    <div className="w-full bg-slate-50 dark:bg-[#0f172a] min-h-screen p-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-[#17203f]">Carte des zones industrielles</h1>
-            <p className="text-slate-500 text-sm mt-0.5">Survolez une zone pour voir ses indicateurs</p>
+            <h1 className="text-2xl font-bold text-[#17203f] dark:text-white">{t('plantmap.title')}</h1>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">{t('plantmap.subtitle')}</p>
           </div>
           <div className="flex gap-4">
-            <div className="bg-white rounded-xl px-4 py-2 border border-slate-200 shadow-sm">
-              <span className="text-xs text-slate-400">Zones actives</span>
-              <p className="text-xl font-bold text-[#17203f]">{zones.length}</p>
+            <div className="bg-white dark:bg-[#1e293b] rounded-xl px-4 py-2 border border-slate-200 dark:border-slate-700 shadow-sm">
+              <span className="text-xs text-slate-400 dark:text-slate-500">{t('plantmap.active_zones')}</span>
+              <p className="text-xl font-bold text-[#17203f] dark:text-white">{zones.length}</p>
             </div>
-            <div className="bg-white rounded-xl px-4 py-2 border border-slate-200 shadow-sm">
-              <span className="text-xs text-slate-400">Capteurs totaux</span>
-              <p className="text-xl font-bold text-[#17203f]">
+            <div className="bg-white dark:bg-[#1e293b] rounded-xl px-4 py-2 border border-slate-200 dark:border-slate-700 shadow-sm">
+              <span className="text-xs text-slate-400 dark:text-slate-500">{t('plantmap.total_sensors')}</span>
+              <p className="text-xl font-bold text-[#17203f] dark:text-white">
                 {Object.values(zoneStats).reduce((sum, s) => sum + (s?.sensor_count || 0), 0)}
               </p>
             </div>
@@ -162,18 +164,38 @@ const PlantMap = () => {
         {/* SVG Map – scrollable container */}
         <div
           ref={svgContainerRef}
-          className="relative w-full bg-white border border-slate-200 rounded-2xl shadow-lg overflow-auto"
+          className="relative w-full bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-2xl shadow-lg overflow-auto"
           style={{ maxHeight: 'calc(100vh - 180px)' }}
         >
-          <svg viewBox="0 0 1000 800" className="w-full h-auto" preserveAspectRatio="xMidYMid meet">
-            {/* Background - original */}
+          <svg viewBox="0 0 1000 800" className="w-full h-auto dark:text-slate-200" preserveAspectRatio="xMidYMid meet">
+            {/* SVG viewBox background — covers entire canvas */}
+            <rect x="0" y="0" width="1000" height="800" fill="#f8fafc" className="plantmap-bg-highlight" />
+
+            {/* Geographic background */}
             <g id="geographic-background">
-              <rect x="0" y="0" width="400" height="800" fill="#f0f9ff" />
-              <path d="M400 0 L1000 0 L1000 200 L750 200 L400 300 Z" fill="#f0f9ff" />
-              <path d="M400 800 L400 300 L750 200 L1000 200" fill="none" stroke="#cbd5e1" strokeWidth="4" />
-              <rect x="0" y="320" width="380" height="40" fill="#e2e8f0" stroke="#94a3b8" />
-              <path d="M850 800 L850 300 L750 200" fill="none" stroke="#f1f5f9" strokeWidth="30" strokeLinecap="square" />
-              <path d="M400 700 L900 700" fill="none" stroke="#f1f5f9" strokeWidth="20" />
+              {/* Sea / water area (left side) */}
+              <rect x="0" y="0" width="400" height="800" fill="#f0f9ff" className="plantmap-bg-light" />
+              {/* Water ripple lines */}
+              <path d="M50 150 Q100 140 150 150 Q200 160 250 150 Q300 140 350 150" fill="none" stroke="#cbd5e1" strokeWidth="1.5" className="plantmap-stroke-border" opacity="0.4" />
+              <path d="M50 350 Q100 340 150 350 Q200 360 250 350 Q300 340 350 350" fill="none" stroke="#cbd5e1" strokeWidth="1.5" className="plantmap-stroke-border" opacity="0.4" />
+              <path d="M50 550 Q100 540 150 550 Q200 560 250 550 Q300 540 350 550" fill="none" stroke="#cbd5e1" strokeWidth="1.5" className="plantmap-stroke-border" opacity="0.4" />
+              {/* Land / industrial area (right side) */}
+              <path d="M400 0 L1000 0 L1000 200 L750 200 L400 300 Z" fill="#f0f9ff" className="plantmap-bg-highlight" />
+              {/* Coastline / quay edge */}
+              <path d="M400 800 L400 300 L750 200 L1000 200" fill="none" stroke="#cbd5e1" strokeWidth="4" className="plantmap-stroke-border" />
+              {/* Access road */}
+              <rect x="0" y="320" width="380" height="40" fill="#e2e8f0" stroke="#94a3b8" className="plantmap-bg-highlight" />
+              <line x1="0" y1="340" x2="380" y2="340" stroke="#94a3b8" strokeWidth="0.5" className="plantmap-stroke-border" opacity="0.3" />
+              {/* Internal plant roads */}
+              <path d="M850 800 L850 300 L750 200" fill="none" stroke="#f1f5f9" strokeWidth="30" strokeLinecap="square" className="plantmap-stroke-grid" />
+              <path d="M400 700 L900 700" fill="none" stroke="#f1f5f9" strokeWidth="20" className="plantmap-stroke-grid" />
+              {/* Road dashes */}
+              <line x1="440" y1="700" x2="480" y2="700" stroke="#94a3b8" strokeWidth="1" strokeDasharray="8 8" className="plantmap-stroke-border" opacity="0.3" />
+              <line x1="520" y1="700" x2="560" y2="700" stroke="#94a3b8" strokeWidth="1" strokeDasharray="8 8" className="plantmap-stroke-border" opacity="0.3" />
+              <line x1="600" y1="700" x2="640" y2="700" stroke="#94a3b8" strokeWidth="1" strokeDasharray="8 8" className="plantmap-stroke-border" opacity="0.3" />
+              <line x1="680" y1="700" x2="720" y2="700" stroke="#94a3b8" strokeWidth="1" strokeDasharray="8 8" className="plantmap-stroke-border" opacity="0.3" />
+              <line x1="760" y1="700" x2="800" y2="700" stroke="#94a3b8" strokeWidth="1" strokeDasharray="8 8" className="plantmap-stroke-border" opacity="0.3" />
+              <line x1="840" y1="700" x2="880" y2="700" stroke="#94a3b8" strokeWidth="1" strokeDasharray="8 8" className="plantmap-stroke-border" opacity="0.3" />
             </g>
 
             {/* Zones interactives */}
@@ -186,7 +208,7 @@ const PlantMap = () => {
                     key={zone.id}
                     onMouseEnter={(e) => handleZoneHover(zone.id, e)}
                     onMouseLeave={handleZoneLeave}
-                    className="cursor-pointer transition-all duration-200"
+                    className="plantmap-zone-wrapper cursor-pointer"
                     onClick={() => goToZone(zone)}
                   >
                     <rect
@@ -198,7 +220,7 @@ const PlantMap = () => {
                       stroke={hasAlerts ? "#f59e0b" : isActive ? "#3b82f6" : "#e2e8f0"}
                       strokeWidth={hasAlerts ? 2.5 : isActive ? 2 : 1.5}
                       rx="4"
-                      className="transition-all duration-200"
+                      className={`transition-all duration-200 ${hasAlerts ? 'plantmap-zone-rect-alert' : isActive ? 'plantmap-zone-rect-active' : 'plantmap-zone-rect-default'}`}
                     />
                     {hasAlerts && (
                       <circle
@@ -209,7 +231,7 @@ const PlantMap = () => {
                         className="animate-pulse"
                       />
                     )}
-                    <text x={zone.x + 5} y={zone.y + 18} className="text-[9px] font-mono fill-slate-400">
+                    <text x={zone.x + 5} y={zone.y + 18} className="text-[9px] font-mono plantmap-zone-text">
                       {zone.code_zone}
                     </text>
                     {isActive && (
@@ -217,7 +239,7 @@ const PlantMap = () => {
                         x={zone.x + zone.w / 2}
                         y={zone.y + zone.h / 2}
                         textAnchor="middle"
-                        className="text-[11px] font-bold fill-slate-700 pointer-events-none"
+                        className="text-[11px] font-bold plantmap-zone-text-name pointer-events-none"
                       >
                         {zone.nom_zone}
                       </text>
@@ -232,7 +254,7 @@ const PlantMap = () => {
         {/* Floating info panel anchored near the hovered zone */}
         {activeZone && (
           <div
-            className="fixed z-50 w-80 bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-200"
+            className="fixed z-50 w-80 bg-white/95 dark:bg-[#1e293b]/95 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden animate-in fade-in zoom-in duration-200"
             style={{ left: panelPosition.x, top: panelPosition.y }}
           >
             {(() => {
@@ -240,21 +262,21 @@ const PlantMap = () => {
               const stats = zone?.stats;
               return (
                 <div>
-                  <div className="p-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
+                  <div className="p-4 border-b border-slate-100 dark:border-slate-700 bg-gradient-to-r from-slate-50 dark:from-[#334155] to-white dark:to-[#1e293b]">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-lg bg-[#17203f]/10 flex items-center justify-center">
                           {getZoneIcon(zone?.code_zone)}
                         </div>
                         <div>
-                          <h3 className="text-base font-bold text-slate-800">{zone?.nom_zone}</h3>
-                          <p className="text-[10px] font-mono text-slate-400">{zone?.code_zone}</p>
+                          <h3 className="text-base font-bold text-slate-800 dark:text-white">{zone?.nom_zone}</h3>
+                          <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500">{zone?.code_zone}</p>
                         </div>
                       </div>
                       {stats?.active_alerts > 0 && (
-                        <div className="flex items-center gap-1 px-2 py-1 bg-amber-50 rounded-lg border border-amber-200">
+                        <div className="flex items-center gap-1 px-2 py-1 bg-amber-50 dark:bg-amber-500/10 rounded-lg border border-amber-200 dark:border-amber-500/30">
                           <AlertTriangle size={12} className="text-amber-500" />
-                          <span className="text-xs font-bold text-amber-600">{stats.active_alerts} alerte(s)</span>
+                          <span className="text-xs font-bold text-amber-600 dark:text-amber-400">{t('plantmap.alerts', { count: stats.active_alerts })}</span>
                         </div>
                       )}
                     </div>
@@ -262,12 +284,12 @@ const PlantMap = () => {
 
                   <div className="p-4 space-y-3">
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-slate-50 rounded-lg p-2 text-center">
-                        <p className="text-[10px] text-slate-400 font-medium">Capteurs</p>
-                        <p className="text-xl font-bold text-[#17203f]">{stats?.sensor_count || 0}</p>
+                      <div className="bg-slate-50 dark:bg-[#0f172a] rounded-lg p-2 text-center">
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">{t('plantmap.sensors')}</p>
+                        <p className="text-xl font-bold text-[#17203f] dark:text-white">{stats?.sensor_count || 0}</p>
                       </div>
-                      <div className="bg-slate-50 rounded-lg p-2 text-center">
-                        <p className="text-[10px] text-slate-400 font-medium">Alertes actives</p>
+                      <div className="bg-slate-50 dark:bg-[#0f172a] rounded-lg p-2 text-center">
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">{t('plantmap.active_alerts')}</p>
                         <p className={`text-xl font-bold ${stats?.active_alerts > 0 ? 'text-amber-500' : 'text-green-500'}`}>
                           {stats?.active_alerts || 0}
                         </p>
@@ -276,16 +298,16 @@ const PlantMap = () => {
 
                     {stats?.sensors && stats.sensors.length > 0 && (
                       <div>
-                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Capteurs</p>
+                        <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">{t('plantmap.sensors_list')}</p>
                         <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
                           {stats.sensors.slice(0, 6).map(s => (
-                            <span key={s.code} className="px-2 py-1 bg-slate-100 rounded text-[10px] font-mono text-slate-600">
+                            <span key={s.code} className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-[10px] font-mono text-slate-600 dark:text-slate-300">
                               {s.code}
                             </span>
                           ))}
                           {stats.sensors.length > 6 && (
-                            <span className="px-2 py-1 bg-slate-100 rounded text-[10px] text-slate-500">
-                              +{stats.sensors.length - 6}
+                            <span className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-[10px] text-slate-500 dark:text-slate-400">
+                              {t('plantmap.sensor_count_overflow', { count: stats.sensors.length - 6 })}
                             </span>
                           )}
                         </div>
@@ -293,12 +315,12 @@ const PlantMap = () => {
                     )}
                   </div>
 
-                  <div className="p-3 border-t border-slate-100 bg-slate-50/50">
+                  <div className="p-3 border-t border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-[#0f172a]">
                     <button
                       onClick={() => goToZone(zone)}
-                      className="w-full text-center text-xs font-semibold text-[#17203f] hover:text-white hover:bg-[#17203f] px-3 py-2 rounded-lg transition-all"
+                      className="w-full text-center text-xs font-semibold text-[#17203f] dark:text-white hover:text-white hover:bg-[#17203f] px-3 py-2 rounded-lg transition-all"
                     >
-                      Voir les détails de la zone →
+                      {t('plantmap.zone_details')}
                     </button>
                   </div>
                 </div>
@@ -310,16 +332,16 @@ const PlantMap = () => {
         {/* Legend */}
         <div className="mt-4 flex flex-wrap gap-4 justify-center">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-white border border-slate-300 rounded"></div>
-            <span className="text-xs text-slate-500">Zone standard</span>
+            <div className="w-3 h-3 bg-white dark:bg-[#1e293b] border border-slate-300 dark:border-slate-600 rounded"></div>
+            <span className="text-xs text-slate-500 dark:text-slate-400">{t('plantmap.standard_zone')}</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-white border-2 border-amber-500 rounded"></div>
-            <span className="text-xs text-slate-500">Zone avec alertes</span>
+            <div className="w-3 h-3 bg-white dark:bg-[#1e293b] border-2 border-amber-500 rounded"></div>
+            <span className="text-xs text-slate-500 dark:text-slate-400">{t('plantmap.alert_zone')}</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-blue-100 border border-blue-300 rounded"></div>
-            <span className="text-xs text-slate-500">Zone survolée</span>
+            <div className="w-3 h-3 bg-blue-100 dark:bg-blue-500/30 border border-blue-300 dark:border-blue-500/50 rounded"></div>
+            <span className="text-xs text-slate-500 dark:text-slate-400">{t('plantmap.hovered_zone')}</span>
           </div>
         </div>
       </div>

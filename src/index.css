@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
 @import 'tailwindcss';
+@custom-variant dark (&:where(.dark, .dark *));
 
 
 
@@ -14,6 +15,241 @@
   body {
     background-color: #F8F9FB;
   }
+
+  .dark body {
+    background-color: #0f172a;
+  }
+}
+
+.dark {
+  --bg-dashboard: #0f172a;
+  --bg-card: #1e293b;
+  --bg-header: #1e293b;
+  --bg-sidebar: #0f172a;
+  --bg-elevated: #334155;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --border-color: #334155;
+  --border-light: #1e293b;
+  --accent: #2D5BFF;
+  --accent-hover: #4B7AFF;
+}
+
+.dark .bg-\[#F8F9FB\] {
+  background-color: var(--bg-dashboard);
+}
+
+.dark .bg-white {
+  background-color: var(--bg-card);
+}
+
+.dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+  color: var(--text-primary);
+}
+
+.dark th {
+  color: var(--text-primary);
+}
+
+.dark .text-slate-300,
+.dark .text-slate-400,
+.dark .text-slate-500,
+.dark .text-slate-600 {
+  color: var(--text-secondary);
+}
+
+.dark .text-slate-700,
+.dark .text-slate-800,
+.dark .text-slate-900 {
+  color: var(--text-primary);
+}
+
+.dark .border-slate-100,
+.dark .border-slate-200,
+.dark .border-slate-300 {
+  border-color: var(--border-color);
+}
+
+.dark .bg-slate-50,
+.dark .bg-slate-50\/50 {
+  background-color: #1e293b;
+}
+
+.dark .bg-slate-100 {
+  background-color: #334155;
+}
+
+.dark .bg-slate-200 {
+  background-color: #475569;
+}
+
+.dark input:not([type="datetime-local"]),
+.dark select,
+.dark textarea {
+  background-color: #1e293b;
+  color: #f1f5f9;
+  border-color: #334155;
+}
+
+.dark input[type="datetime-local"] {
+  color-scheme: dark;
+}
+
+.dark .shadow-sm,
+.dark .shadow-md,
+.dark .shadow-lg,
+.dark .shadow-xl,
+.dark .shadow-2xl {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+}
+
+.dark .ring-offset-white {
+  --tw-ring-offset-color: #1e293b;
+}
+
+/* ── Scrollbar dark mode ── */
+.dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* ── SVG / Canvas dark mode overrides ── */
+
+/* Water / sea area — deep teal */
+.dark .plantmap-bg-light {
+  fill: #0f2937 !important;
+}
+
+/* Land / dock area — dark slate */
+.dark .plantmap-bg-highlight {
+  fill: #1a2a3a !important;
+  stroke: #2a3a4a !important;
+  stroke-width: 1 !important;
+}
+
+/* Roads / infrastructure borders */
+.dark .plantmap-stroke-border {
+  stroke: #2a3a4a !important;
+  stroke-width: 2 !important;
+}
+
+/* Conveyor / path fills */
+.dark .plantmap-stroke-grid {
+  stroke: #1a2a3a !important;
+}
+
+/* Default zone — card-like, elevated above the background */
+.dark .plantmap-zone-rect-default {
+  fill: #2a3a4a !important;
+  stroke: #4a5a6a !important;
+  stroke-width: 1.5 !important;
+}
+
+/* Zone hover effect — slightly brighter on hover */
+.dark .plantmap-zone-wrapper:hover .plantmap-zone-rect-default {
+  fill: #334155 !important;
+  stroke: #5a7a9a !important;
+}
+
+.dark .plantmap-zone-wrapper:hover .plantmap-zone-rect-active {
+  fill: #2a4a6a !important;
+  stroke: #7ab0ff !important;
+}
+
+/* Hovered / active zone — blue highlight */
+.dark .plantmap-zone-rect-active {
+  fill: #1e3a5f !important;
+  stroke: #60a5fa !important;
+  stroke-width: 2 !important;
+}
+
+/* Alert zone — amber warning border */
+.dark .plantmap-zone-rect-alert {
+  stroke: #fbbf24 !important;
+  stroke-width: 2.5 !important;
+}
+
+/* Zone code text */
+.dark .plantmap-zone-text {
+  fill: #94a3b8;
+}
+
+/* Zone name text (shown on hover) */
+.dark .plantmap-zone-text-name {
+  fill: #e2e8f0;
+}
+
+/* Zone sensor count */
+.dark .plantmap-zone-text-sensor {
+  fill: #64748b;
+}
+
+/* Legend boxes */
+.dark .plantmap-legend-box {
+  background-color: #1e293b;
+  border-color: #475569;
+}
+
+/* ── Canvas dark mode ── */
+.dark canvas {
+  filter: none;
+}
+
+/* ── Recharts dark mode overrides ── */
+.dark .recharts-cartesian-grid-horizontal line,
+.dark .recharts-cartesian-grid-vertical line {
+  stroke: #334155 !important;
+}
+
+.dark .recharts-text {
+  fill: #94a3b8 !important;
+}
+
+.dark .recharts-legend-item-text {
+  color: #94a3b8 !important;
+}
+
+.dark .recharts-tooltip-wrapper .recharts-default-tooltip {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+.dark .recharts-tooltip-label {
+  color: #e2e8f0 !important;
+}
+
+.dark .recharts-default-tooltip .recharts-tooltip-item {
+  color: #94a3b8 !important;
+}
+
+/* ── Chart.js dark mode overrides ── */
+.dark .chartjs-tooltip {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #e2e8f0 !important;
+}
+
+/* ── Lucide icon dark mode helper ── */
+.dark .icon-muted {
+  color: #64748b;
+}
+
+.dark .icon-brand {
+  color: #4B7AFF;
 }
 
 @layer components {

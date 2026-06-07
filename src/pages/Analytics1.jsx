@@ -5,7 +5,7 @@ import { origins } from './Managment';
 import { useAlerts } from '../hooks/useAlerts';
 import { 
   Thermometer, Gauge, Droplets, Wind, Calendar, Download, 
-  TrendingUp, AlertTriangle, Activity, RefreshCw, ArrowRight, Send, X
+  TrendingUp, AlertTriangle, Activity, RefreshCw, ArrowRight, Send, X, Check
 } from 'lucide-react';
 import Button from '../components/Button';
 import {
@@ -654,7 +654,9 @@ useEffect(() => { fetchPrediction(); }, [selectedCategory, selectedZone]);
             {val}{prediction.unit}
           </div>
           {val >= prediction.threshold && (
-            <div className="text-xs text-red-500 mt-1">⚠ Seuil dépassé</div>
+            <div className="text-xs text-red-500 mt-1 flex items-center gap-0.5">
+              <AlertTriangle size={10} className="text-red-500" /> Seuil dépassé
+            </div>
           )}
         </div>
       ))}
@@ -848,7 +850,7 @@ useEffect(() => { fetchPrediction(); }, [selectedCategory, selectedZone]);
             )}
           </div>
           <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] font-semibold text-slate-500">
-            {bubbleStatus === 'sending' ? 'Envoi…' : bubbleStatus === 'done' ? 'Envoyé ✓' : 'Erreur ✗'}
+            {bubbleStatus === 'sending' ? 'Envoi…' : bubbleStatus === 'done' ? <>Envoyé <Check size={10} className="inline text-green-600" /></> : <>Erreur <X size={10} className="inline text-red-500" /></>}
           </div>
         </div>
       )}

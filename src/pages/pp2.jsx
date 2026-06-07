@@ -384,7 +384,7 @@ const Prediction = () => {
                   {peak.toFixed(1)}
                   <span className="text-base font-medium text-slate-400 ml-1">{activeCategory?.unit}</span>
                 </p>
-                {isOver && <p className="text-xs text-red-500 mt-1 font-semibold">⚠ Dépasse le seuil</p>}
+                {isOver && <p className="text-xs text-red-500 mt-1 font-semibold flex items-center gap-1"><AlertTriangle size={12} className="text-red-500" /> Dépasse le seuil</p>}
               </>
             );
           })() : <p className="text-3xl font-bold text-slate-300">—</p>}

@@ -22,8 +22,6 @@ export function showBrowserNotification(alert) {
   });
   notification.onclick = () => {
     window.focus();
-    // Utilise l'API History pour naviguer sans rechargement de page
-    window.history.pushState({}, '', '/mainlayout/alerts');
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    window.location.href = '/mainlayout/alerts';
   };
 }

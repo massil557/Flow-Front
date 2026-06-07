@@ -45,7 +45,7 @@ export function AuthProvider({ children }) {
     setToken(access_token); // ← déclenche useEffect[token] → rehydrate() → setUser()
     return true;
   } catch (err) {
-    setError(err.message || 'Erreur de connexion');
+    setError(err.message || 'Connection error');
     setLoading(false); // ← seulement en cas d'erreur, sinon useEffect gère
     return false;
   }

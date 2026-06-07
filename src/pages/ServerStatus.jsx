@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { origins } from './Managment';
+import { useTranslation } from 'react-i18next';
 import {
   Server, Cpu, HardDrive, Database, Zap, Activity,
   RefreshCw, Clock, CheckCircle, XCircle, AlertTriangle,
@@ -11,17 +12,17 @@ import {
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function getColorByPercent(pct) {
-  if (pct >= 90) return { bar: 'bg-red-500',    text: 'text-red-600',    badge: 'bg-red-50 border-red-200 text-red-700'    };
-  if (pct >= 70) return { bar: 'bg-orange-400', text: 'text-orange-500', badge: 'bg-orange-50 border-orange-200 text-orange-700' };
-  return               { bar: 'bg-emerald-500', text: 'text-emerald-600', badge: 'bg-emerald-50 border-emerald-200 text-emerald-700' };
+  if (pct >= 90) return { bar: 'bg-red-500',    text: 'text-red-600',    badge: 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30 text-red-700 dark:text-red-400'    };
+  if (pct >= 70) return { bar: 'bg-orange-400', text: 'text-orange-500', badge: 'bg-orange-50 dark:bg-orange-500/10 border-orange-200 dark:border-orange-500/30 text-orange-700 dark:text-orange-400' };
+  return               { bar: 'bg-emerald-500', text: 'text-emerald-600', badge: 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400' };
 }
 
 function StatusDot({ ok, label }) {
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${
       ok
-        ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-        : 'bg-red-50 border-red-200 text-red-700'
+        ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400'
+        : 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30 text-red-700 dark:text-red-400'
     }`}>
       <span className={`w-1.5 h-1.5 rounded-full ${ok ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
       {label}
@@ -41,7 +42,7 @@ function CircleGauge({ percent, label, sublabel, size = 120 }) {
     <div className="flex flex-col items-center gap-2">
       <svg width={size} height={size} viewBox="0 0 100 100">
         {/* Track */}
-        <circle cx="50" cy="50" r={r} fill="none" stroke="#e2e8f0" strokeWidth="8" />
+        <circle cx="50" cy="50" r={r} fill="none" stroke="#e2e8f0" className="dark:opacity-30" strokeWidth="8" />
         {/* Fill */}
         <circle
           cx="50" cy="50" r={r}
@@ -54,14 +55,14 @@ function CircleGauge({ percent, label, sublabel, size = 120 }) {
           style={{ transition: 'stroke-dasharray 0.6s ease' }}
         />
         {/* Text */}
-        <text x="50" y="46" textAnchor="middle" fontSize="18" fontWeight="bold" fill="#1e293b">
+        <text x="50" y="46" textAnchor="middle" fontSize="18" fontWeight="bold" className="fill-slate-800 dark:fill-white">
           {percent}%
         </text>
         <text x="50" y="62" textAnchor="middle" fontSize="9" fill="#94a3b8">
           {label}
         </text>
       </svg>
-      {sublabel && <p className="text-xs text-slate-500 font-medium text-center">{sublabel}</p>}
+        {sublabel && <p className="text-xs text-slate-500 dark:text-slate-400 font-medium text-center">{sublabel}</p>}
     </div>
   );
 }
@@ -71,7 +72,7 @@ function CircleGauge({ percent, label, sublabel, size = 120 }) {
 function ProgressBar({ percent }) {
   const colors = getColorByPercent(percent);
   return (
-    <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+    <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
       <div
         className={`h-full rounded-full transition-all duration-700 ${colors.bar}`}
         style={{ width: `${Math.min(percent, 100)}%` }}
@@ -82,15 +83,15 @@ function ProgressBar({ percent }) {
 
 // ── KPI Card ─────────────────────────────────────────────────────────────────
 
-function KpiCard({ icon: Icon, label, value, sub, color = 'text-[#17203f]', bg = 'bg-white' }) {
+function KpiCard({ icon: Icon, label, value, sub, color = 'text-[#17203f] dark:text-white', bg = 'bg-white dark:bg-[#1e293b]' }) {
   return (
-    <div className={`${bg} rounded-2xl border border-slate-200 p-4`}>
+    <div className={`${bg} rounded-2xl border border-slate-200 dark:border-slate-700 p-4`}>
       <div className="flex items-center justify-between mb-2">
-        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{label}</p>
-        <Icon size={16} className="text-slate-300" />
+        <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">{label}</p>
+        <Icon size={16} className="text-slate-300 dark:text-slate-600" />
       </div>
       <p className={`text-2xl font-bold ${color}`}>{value ?? '—'}</p>
-      {sub && <p className="text-xs text-slate-400 mt-1">{sub}</p>}
+      {sub && <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{sub}</p>}
     </div>
   );
 }
@@ -98,6 +99,7 @@ function KpiCard({ icon: Icon, label, value, sub, color = 'text-[#17203f]', bg =
 // ── Page principale ───────────────────────────────────────────────────────────
 
 export default function ServerStatus() {
+  const { t } = useTranslation();
   const [data,     setData]     = useState(null);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState(null);
@@ -111,7 +113,7 @@ export default function ServerStatus() {
       setLastFetch(new Date());
       setError(null);
     } catch (err) {
-      setError('Impossible de joindre le serveur.');
+      setError(t('server_status.connection_error'));
     } finally {
       setLoading(false);
     }
@@ -134,10 +136,10 @@ export default function ServerStatus() {
   if (error) return (
     <div className="p-8 flex flex-col items-center justify-center gap-4 text-center">
       <XCircle size={48} className="text-red-400" />
-      <p className="text-lg font-bold text-slate-700">Serveur inaccessible</p>
-      <p className="text-sm text-slate-400">{error}</p>
+      <p className="text-lg font-bold text-slate-700 dark:text-slate-200">{t('server_status.unreachable')}</p>
+      <p className="text-sm text-slate-400 dark:text-slate-500">{error}</p>
       <button onClick={fetch} className="px-5 py-2 bg-[#17203f] text-white rounded-xl text-sm font-semibold">
-        Réessayer
+        {t('server_status.retry')}
       </button>
     </div>
   );
@@ -154,17 +156,17 @@ export default function ServerStatus() {
       {/* ── Header ── */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-[#17203f] flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center">
-              <Server className="text-indigo-600" size={20} />
+          <h1 className="text-3xl font-bold text-[#17203f] dark:text-white flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-500/10 flex items-center justify-center">
+              <Server className="text-indigo-600 dark:text-indigo-400" size={20} />
             </div>
-            État du serveur
+            {t('server_status.title')}
           </h1>
-          <p className="text-slate-400 text-sm mt-1 flex items-center gap-2">
+          <p className="text-slate-400 dark:text-slate-500 text-sm mt-1 flex items-center gap-2">
             <Clock size={13} />
-            Mis à jour : {lastFetch?.toLocaleTimeString() ?? '—'}
-            <span className="text-slate-300">·</span>
-            Uptime : <span className="font-semibold text-slate-600">{uptime}</span>
+            {t('server_status.last_update')} {lastFetch?.toLocaleTimeString() ?? '—'}
+            <span className="text-slate-300 dark:text-slate-600">·</span>
+            {t('server_status.uptime')} <span className="font-semibold text-slate-600 dark:text-slate-300">{uptime}</span>
           </p>
         </div>
 
@@ -175,69 +177,69 @@ export default function ServerStatus() {
             className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-semibold transition-all ${
               autoRefresh
                 ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                : 'bg-slate-50 border-slate-200 text-slate-500'
+                : 'bg-slate-50 dark:bg-[#334155] border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300'
             }`}
           >
             <span className={`w-2 h-2 rounded-full ${autoRefresh ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
-            {autoRefresh ? 'Auto (10s)' : 'Manuel'}
+            {autoRefresh ? t('server_status.auto_refresh') : t('server_status.manual_refresh')}
           </button>
 
           <button
             onClick={fetch}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 text-xs font-semibold rounded-xl hover:border-[#17203f]/40 transition-all"
+            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold rounded-xl hover:border-[#17203f]/40 transition-all"
           >
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-            Actualiser
+            {t('server_status.refresh')}
           </button>
         </div>
       </div>
 
       {/* ── Statuts des services ── */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 mb-6">
-        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Services</p>
+      <div className="bg-white dark:bg-[#1e293b] rounded-2xl border border-slate-200 dark:border-slate-700 p-5 mb-6">
+        <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-4">{t('server_status.services')}</p>
         <div className="flex flex-wrap gap-4 items-center">
 
           <div className="flex items-center gap-3">
             <Database size={18} className={dbOk ? 'text-emerald-500' : 'text-red-500'} />
             <div>
-              <p className="text-sm font-bold text-slate-700">PostgreSQL</p>
+              <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{t('server_status.postgresql')}</p>
               <div className="flex items-center gap-2 mt-0.5">
-                <StatusDot ok={dbOk} label={dbOk ? 'Connecté' : 'Erreur'} />
+                <StatusDot ok={dbOk} label={dbOk ? t('server_status.connected') : t('server_status.error')} />
                 {dbOk && database.latency_ms !== null && (
-                  <span className="text-xs text-slate-400">{database.latency_ms} ms</span>
+                  <span className="text-xs text-slate-400 dark:text-slate-500">{database.latency_ms} ms</span>
                 )}
               </div>
             </div>
           </div>
 
-          <div className="w-px h-10 bg-slate-100" />
+          <div className="w-px h-10 bg-slate-100 dark:bg-slate-700" />
 
           <div className="flex items-center gap-3">
-            <Zap size={18} className={ollamaOk ? 'text-violet-500' : 'text-slate-400'} />
+            <Zap size={18} className={ollamaOk ? 'text-violet-500' : 'text-slate-400 dark:text-slate-600'} />
             <div>
-              <p className="text-sm font-bold text-slate-700">Ollama IA</p>
+              <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{t('server_status.ollama')}</p>
               <div className="flex items-center gap-2 mt-0.5">
-                <StatusDot ok={ollamaOk} label={ollamaOk ? 'En ligne' : 'Hors ligne'} />
+                <StatusDot ok={ollamaOk} label={ollamaOk ? t('server_status.online') : t('server_status.offline')} />
                 {ollamaOk && ollama.model && (
-                  <span className="text-xs text-slate-400 font-mono">{ollama.model}</span>
+                  <span className="text-xs text-slate-400 dark:text-slate-500 font-mono">{ollama.model}</span>
                 )}
               </div>
             </div>
           </div>
 
-          <div className="w-px h-10 bg-slate-100" />
+          <div className="w-px h-10 bg-slate-100 dark:bg-slate-700" />
 
           <div className="flex items-center gap-3">
-            {opcuaOk ? <Wifi size={18} className="text-blue-500" /> : <WifiOff size={18} className="text-slate-400" />}
+            {opcuaOk ? <Wifi size={18} className="text-blue-500" /> : <WifiOff size={18} className="text-slate-400 dark:text-slate-600" />}
             <div>
-              <p className="text-sm font-bold text-slate-700">OPC-UA</p>
+              <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{t('server_status.opcua')}</p>
               <div className="flex items-center gap-2 mt-0.5">
                 <StatusDot ok={opcuaOk} label={
-                  opcua.status === 'active'  ? 'Actif'   :
-                  opcua.status === 'waiting' ? 'En attente' : 'Inconnu'
+                  opcua.status === 'active'  ? t('server_status.active')   :
+                  opcua.status === 'waiting' ? t('server_status.pending') : t('server_status.unknown')
                 } />
                 {opcuaOk && (
-                  <span className="text-xs text-slate-400">{opcua.active_feeds} flux actifs</span>
+                  <span className="text-xs text-slate-400 dark:text-slate-500">{t('server_status.active_feeds', { count: opcua.active_feeds })}</span>
                 )}
               </div>
             </div>
@@ -246,7 +248,7 @@ export default function ServerStatus() {
 
         {/* DB version */}
         {database.version && (
-          <p className="text-xs text-slate-300 mt-4 font-mono">{database.version}</p>
+          <p className="text-xs text-slate-300 dark:text-slate-600 mt-4 font-mono">{database.version}</p>
         )}
       </div>
 
@@ -254,53 +256,53 @@ export default function ServerStatus() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6">
 
         {/* CPU */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col items-center gap-4">
+        <div className="bg-white dark:bg-[#1e293b] rounded-2xl border border-slate-200 dark:border-slate-700 p-6 flex flex-col items-center gap-4">
           <div className="flex items-center gap-2 self-start">
-            <Cpu size={16} className="text-slate-400" />
-            <p className="text-sm font-bold text-slate-700">Processeur</p>
+            <Cpu size={16} className="text-slate-400 dark:text-slate-500" />
+            <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{t('server_status.processor')}</p>
           </div>
           <CircleGauge
             percent={cpu.percent}
-            label="CPU"
-            sublabel={`${cpu.cores} cœurs${cpu.freq_mhz ? ` · ${cpu.freq_mhz} MHz` : ''}`}
+            label={t('server_status.cpu_label')}
+            sublabel={cpu.freq_mhz ? t('server_status.cpu_detail', { cores: cpu.cores, freq: cpu.freq_mhz }) : t('server_status.cpu_detail', { cores: cpu.cores, freq: '' }).replace(' ·  MHz', '')}
           />
           <ProgressBar percent={cpu.percent} />
           <p className={`text-lg font-bold ${getColorByPercent(cpu.percent).text}`}>
-            {cpu.percent}% utilisé
+            {t('server_status.usage_percent', { percent: cpu.percent })}
           </p>
         </div>
 
         {/* RAM */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col items-center gap-4">
+        <div className="bg-white dark:bg-[#1e293b] rounded-2xl border border-slate-200 dark:border-slate-700 p-6 flex flex-col items-center gap-4">
           <div className="flex items-center gap-2 self-start">
-            <MemoryStick size={16} className="text-slate-400" />
-            <p className="text-sm font-bold text-slate-700">Mémoire RAM</p>
+            <MemoryStick size={16} className="text-slate-400 dark:text-slate-500" />
+            <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{t('server_status.memory_ram')}</p>
           </div>
           <CircleGauge
             percent={ram.percent}
-            label="RAM"
-            sublabel={`${ram.used_gb} Go / ${ram.total_gb} Go`}
+            label={t('server_status.ram_label')}
+            sublabel={t('server_status.ram_detail', { used: ram.used_gb, total: ram.total_gb })}
           />
           <ProgressBar percent={ram.percent} />
           <p className={`text-lg font-bold ${getColorByPercent(ram.percent).text}`}>
-            {ram.percent}% utilisé
+            {t('server_status.usage_percent', { percent: ram.percent })}
           </p>
         </div>
 
         {/* Disque */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col items-center gap-4">
+        <div className="bg-white dark:bg-[#1e293b] rounded-2xl border border-slate-200 dark:border-slate-700 p-6 flex flex-col items-center gap-4">
           <div className="flex items-center gap-2 self-start">
-            <HardDrive size={16} className="text-slate-400" />
-            <p className="text-sm font-bold text-slate-700">Disque</p>
+            <HardDrive size={16} className="text-slate-400 dark:text-slate-500" />
+            <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{t('server_status.disk_caption')}</p>
           </div>
           <CircleGauge
             percent={disk.percent}
-            label="Disque"
-            sublabel={`${disk.used_gb} Go / ${disk.total_gb} Go`}
+            label={t('server_status.disk_label')}
+            sublabel={t('server_status.disk_detail', { used: disk.used_gb, total: disk.total_gb })}
           />
           <ProgressBar percent={disk.percent} />
           <p className={`text-lg font-bold ${getColorByPercent(disk.percent).text}`}>
-            {disk.percent}% utilisé
+            {t('server_status.usage_percent', { percent: disk.percent })}
           </p>
         </div>
       </div>
@@ -309,36 +311,36 @@ export default function ServerStatus() {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <KpiCard
           icon={Activity}
-          label="Capteurs totaux"
+          label={t('server_status.total_sensors')}
           value={stats.sensors_total}
           color="text-[#17203f]"
         />
         <KpiCard
           icon={CheckCircle}
-          label="Capteurs actifs"
+          label={t('server_status.active_sensors')}
           value={stats.sensors_active}
           color="text-emerald-600"
-          bg="bg-emerald-50"
+          bg="bg-emerald-50 dark:bg-emerald-500/10"
         />
         <KpiCard
           icon={Database}
-          label="Mesures totales"
+          label={t('server_status.total_measurements')}
           value={stats.measures_total?.toLocaleString()}
           color="text-blue-600"
         />
         <KpiCard
           icon={AlertTriangle}
-          label="Alertes actives"
+          label={t('server_status.active_alerts')}
           value={stats.alerts_active}
           color={stats.alerts_active > 0 ? 'text-red-600' : 'text-emerald-600'}
-          bg={stats.alerts_active > 0 ? 'bg-red-50' : 'bg-white'}
+          bg={stats.alerts_active > 0 ? 'bg-red-50 dark:bg-red-500/10' : 'bg-white dark:bg-[#1e293b]'}
         />
         <KpiCard
           icon={Clock}
-          label="Dernière mesure"
+          label={t('server_status.last_measurement')}
           value={stats.last_measure_at ? stats.last_measure_at.split(' ')[1] : '—'}
-          sub={stats.last_measure_at ? stats.last_measure_at.split(' ')[0] : 'Aucune donnée'}
-          color="text-slate-700"
+          sub={stats.last_measure_at ? stats.last_measure_at.split(' ')[0] : t('server_status.no_data')}
+          color="text-slate-700 dark:text-slate-200"
         />
       </div>
 

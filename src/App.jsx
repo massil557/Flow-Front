@@ -5,7 +5,7 @@ import MainLayout from "./layouts/MainLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import {
   Dashboard, Analytics, Alerts, LoginPage,
-  PlantMap, Zone, AdminUsers, Prediction, ServerStatus
+  PlantMap, Zone, AdminUsers, Prediction, ServerStatus, Settings
 } from "./pages/Managment";
 import UserProfile from "./pages/UserProfile";
 
@@ -47,6 +47,7 @@ export default function App() {
           <Route path="plantmap"      element={<PlantMap />} />
           <Route path="zone"          element={<Zone />} />
           <Route path="profile"       element={<UserProfile />} />
+          <Route path="settings"     element={<Settings />} />
           <Route path="prediction"    element={<Prediction />} />
 
           {/* Admin only */}

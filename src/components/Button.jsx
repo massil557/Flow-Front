@@ -19,6 +19,7 @@ const VARIANTS = {
     'border border-[#17203f]',
     'shadow-sm hover:shadow-md',
     'disabled:bg-[#17203f]/40 disabled:border-[#17203f]/40',
+    'dark:bg-[#17203f] dark:hover:bg-[#2a3a6d]',
   ].join(' '),
 
   outline: [
@@ -26,6 +27,7 @@ const VARIANTS = {
     'hover:bg-[#17203f] hover:text-white active:bg-[#111830]',
     'border-2 border-[#17203f]',
     'disabled:opacity-40',
+    'dark:text-slate-200 dark:border-slate-400 dark:hover:bg-slate-200 dark:hover:text-[#17203f]',
   ].join(' '),
 
   danger: [
@@ -34,6 +36,7 @@ const VARIANTS = {
     'border border-red-600',
     'shadow-sm hover:shadow-md',
     'disabled:opacity-40',
+    'dark:bg-red-700 dark:hover:bg-red-800',
   ].join(' '),
 
   ghost: [
@@ -41,6 +44,7 @@ const VARIANTS = {
     'hover:bg-slate-100 active:bg-slate-200',
     'border border-slate-200',
     'disabled:opacity-40',
+    'dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-700 dark:hover:text-white',
   ].join(' '),
 
   success: [
@@ -49,6 +53,7 @@ const VARIANTS = {
     'border border-emerald-600',
     'shadow-sm hover:shadow-md',
     'disabled:opacity-40',
+    'dark:bg-emerald-700 dark:hover:bg-emerald-800',
   ].join(' '),
 };
 

@@ -11,6 +11,7 @@ import PlantMap     from "./PlantMap";
 import Zone         from "./Zone";
 import Prediction   from './Prediction';
 import ServerStatus from './ServerStatus';   // ← nouveau
+import Settings from './Settings';
 
 const origins = ''; // Proxy handles routing to backend
 
@@ -28,4 +29,5 @@ export {
   Zone,
   Prediction,
   ServerStatus,   // ← nouveau
+  Settings,
 };

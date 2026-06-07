@@ -1,8 +1,10 @@
 // src/components/FloatingReportButton.jsx
 import React, { useState, useRef, useEffect } from 'react';
 import { FileText, Send, X, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const FloatingReportButton = ({ isOpen, onOpen, onCancel, status, progress, onRetry }) => {
+  const { t } = useTranslation();
   const [position, setPosition] = useState({ y: 200 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ y: 0 });
@@ -80,13 +82,13 @@ const FloatingReportButton = ({ isOpen, onOpen, onCancel, status, progress, onRe
   const getStatusText = () => {
     switch (status) {
       case 'sending':
-        return 'Envoi en cours...';
+        return t('floating_report.sending');
       case 'success':
-        return 'Rapport envoyé !';
+        return t('floating_report.sent');
       case 'error':
-        return 'Erreur d\'envoi';
+        return t('floating_report.error');
       default:
-        return 'Rapport prêt';
+        return t('floating_report.ready');
     }
   };
 
@@ -122,41 +124,41 @@ const FloatingReportButton = ({ isOpen, onOpen, onCancel, status, progress, onRe
       {/* Modal for report options (replaces the old modal) */}
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+          <div className="bg-white dark:bg-[#1e293b] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-[#17203f]/10 flex items-center justify-center">
-                    <Send size={16} className="text-[#17203f]" />
+                  <div className="w-8 h-8 rounded-full bg-[#17203f]/10 dark:bg-white/10 flex items-center justify-center">
+                    <Send size={16} className="text-[#17203f] dark:text-white" />
                   </div>
-                  <h2 className="text-xl font-bold text-[#17203f]">Envoyer le rapport</h2>
+                  <h2 className="text-xl font-bold text-[#17203f] dark:text-white">{t('floating_report.send_report')}</h2>
                 </div>
                 <button
                   onClick={onCancel}
-                  className="text-slate-400 hover:text-slate-600 transition-colors"
+                  className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                 >
                   <X size={20} />
                 </button>
               </div>
 
-              <p className="text-sm text-slate-500 mb-6">
-                Choisissez la période et le destinataire
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+                {t('floating_report.choose_period_recipient')}
               </p>
 
               <div className="space-y-4">
                 {/* Period selection (same as before) */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Période</label>
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">{t('floating_report.period')}</label>
                   <div className="flex gap-2 flex-wrap">
                     {['daily', 'weekly', 'monthly', 'custom'].map((p) => (
                       <button
                         key={p}
                         onClick={() => {}}
                         className={`px-3 py-2 rounded-lg border text-sm font-medium transition-all ${
-                          false ? 'bg-[#17203f] text-white' : 'bg-white text-slate-600 border-slate-200'
+                          false ? 'bg-[#17203f] text-white' : 'bg-white dark:bg-[#334155] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
                         }`}
                       >
-                        {p === 'daily' ? 'Quotidien' : p === 'weekly' ? 'Hebdomadaire' : p === 'monthly' ? 'Mensuel' : 'Perso'}
+                        {p === 'daily' ? t('floating_report.daily') : p === 'weekly' ? t('floating_report.weekly') : p === 'monthly' ? t('floating_report.monthly') : t('floating_report.custom')}
                       </button>
                     ))}
                   </div>
@@ -165,13 +167,13 @@ const FloatingReportButton = ({ isOpen, onOpen, onCancel, status, progress, onRe
                 {/* Custom date range (conditional) */}
                 {/* Email field */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                    Email destinataire
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                    {t('floating_report.recipient_email')}
                   </label>
                   <input
                     type="email"
-                    placeholder="ex: manager@cevital.dz"
-                    className="w-full px-4 py-2 rounded-xl border-2 border-slate-200 bg-slate-50 text-sm outline-none focus:border-[#17203f]"
+                    placeholder={t('floating_report.email_placeholder')}
+                    className="w-full px-4 py-2 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#334155] text-sm outline-none focus:border-[#17203f] dark:text-slate-200"
                   />
                 </div>
               </div>
@@ -179,16 +181,16 @@ const FloatingReportButton = ({ isOpen, onOpen, onCancel, status, progress, onRe
               <div className="flex gap-3 mt-6">
                 <button
                   onClick={onCancel}
-                  className="flex-1 px-4 py-2 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-colors"
+                  className="flex-1 px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                 >
-                  Annuler
+                  {t('floating_report.cancel')}
                 </button>
                 <button
                   onClick={() => {}}
                   className="flex-1 px-4 py-2 bg-[#17203f] text-white rounded-xl hover:bg-[#1e2a55] transition-colors flex items-center justify-center gap-2"
                 >
                   <Send size={14} />
-                  Envoyer
+                  {t('floating_report.send')}
                 </button>
               </div>
             </div>

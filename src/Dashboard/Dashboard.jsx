@@ -795,7 +795,7 @@ const Dashboard = () => {
       <div className="flex justify-between items-center mb-10">
         <h1 className="text-cyan-400 text-2xl font-black italic tracking-tighter uppercase"></h1>
         <div className={`px-4 py-1 rounded-full text-[10px] font-bold uppercase border ${sensorData.status === 'connected' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/50' : 'bg-red-500/10 text-red-500 border-red-500/50'}`}>
-          {sensorData.status === 'connected' ? '● System Live' : '○ Offline'}
+          {sensorData.status === 'connected' ? <><span className="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-1.5" /> System Live</> : <><span className="inline-block w-2 h-2 rounded-full bg-red-500 mr-1.5" /> Offline</>}
         </div>
       </div>
 
